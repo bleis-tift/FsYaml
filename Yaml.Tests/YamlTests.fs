@@ -58,3 +58,31 @@ module ScalarTypes =
     |> When Yaml.load<string option>
     |> It should equal (Some expected)
     |> Verify
+
+  [<Example("y", true)>]
+  [<Example("Y", true)>]
+  [<Example("yes", true)>]
+  [<Example("Yes", true)>]
+  [<Example("YES", true)>]
+  [<Example("n", false)>]
+  [<Example("N", false)>]
+  [<Example("no", false)>]
+  [<Example("No", false)>]
+  [<Example("NO", false)>]
+  [<Example("true", true)>]
+  [<Example("True", true)>]
+  [<Example("TRUE", true)>]
+  [<Example("false", false)>]
+  [<Example("False", false)>]
+  [<Example("FALSE", false)>]
+  [<Example("on", true)>]
+  [<Example("On", true)>]
+  [<Example("ON", true)>]
+  [<Example("off", false)>]
+  [<Example("Off", false)>]
+  [<Example("OFF", false)>]
+  let boolの解析 yaml expected =
+    Given yaml
+    |> When Yaml.load<bool>
+    |> It should equal expected
+    |> Verify

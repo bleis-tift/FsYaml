@@ -19,6 +19,11 @@ let convValue (ty: System.Type) (x: obj) =
   | ".nan" | ".NaN" | ".NAN" -> nan
   | otherwise -> float otherwise
 
+  let str2bool = function
+  | "y" | "Y" | "yes" | "Yes" | "YES" | "true" | "True" | "TRUE" | "on" | "On" | "ON" -> true
+  | "n" | "N" | "no" | "No" | "NO" | "false" | "False" | "FALSE" | "off" | "Off" | "OFF" -> false
+  | otherwise -> bool.Parse otherwise
+
   let str2option f x =
     match unbox x with
     | Raw("~" | "null" | "Null" | "NULL" | "") -> None
@@ -28,6 +33,7 @@ let convValue (ty: System.Type) (x: obj) =
   | IntType -> int (str x) |> box
   | FloatType -> str2float (str x) |> box
   | StrType -> str x |> box
+  | BoolType -> str2bool (str x) |> box
   | Opt IntType -> str2option int x |> box
   | Opt FloatType -> str2option float x |> box
   | Opt StrType -> str2option string x |> box
