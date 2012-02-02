@@ -5,12 +5,12 @@
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
     <ProductVersion>8.0.30703</ProductVersion>
     <SchemaVersion>2.0</SchemaVersion>
-    <ProjectGuid>{6a06e448-c679-49b4-b4ec-093dec51c326}</ProjectGuid>
+    <ProjectGuid>{7ce0ba06-3236-4499-a283-b7a60cc4500a}</ProjectGuid>
     <OutputType>Library</OutputType>
-    <RootNamespace>Yaml.Tests</RootNamespace>
-    <AssemblyName>Yaml.Tests</AssemblyName>
+    <RootNamespace>Yaml</RootNamespace>
+    <AssemblyName>FsYaml</AssemblyName>
     <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
-    <Name>Yaml.Tests</Name>
+    <Name>FsYaml</Name>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
@@ -20,7 +20,7 @@
     <OutputPath>bin\Debug\</OutputPath>
     <DefineConstants>DEBUG;TRACE</DefineConstants>
     <WarningLevel>3</WarningLevel>
-    <DocumentationFile>bin\Debug\Yaml.Tests.XML</DocumentationFile>
+    <DocumentationFile>bin\Debug\Yaml.XML</DocumentationFile>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
@@ -29,45 +29,31 @@
     <OutputPath>bin\Release\</OutputPath>
     <DefineConstants>TRACE</DefineConstants>
     <WarningLevel>3</WarningLevel>
-    <DocumentationFile>bin\Release\Yaml.Tests.XML</DocumentationFile>
+    <DocumentationFile>bin\Release\Yaml.XML</DocumentationFile>
   </PropertyGroup>
   <Import Project="$(MSBuildExtensionsPath32)\FSharp\1.0\Microsoft.FSharp.Targets" Condition="!Exists('$(MSBuildBinPath)\Microsoft.Build.Tasks.v4.0.dll')" />
   <Import Project="$(MSBuildExtensionsPath32)\..\Microsoft F#\v4.0\Microsoft.FSharp.Targets" Condition=" Exists('$(MSBuildBinPath)\Microsoft.Build.Tasks.v4.0.dll')" />
   <ItemGroup>
-    <Compile Include="YamlScenario.fs" />
+    <Compile Include="Patterns.fs" />
+    <Compile Include="ReflectionUtils.fs" />
+    <Compile Include="Str.fs" />
+    <Compile Include="Yaml.fs" />
     <None Include="packages.config" />
-    <Compile Include="YamlExamples.fs" />
-    <Compile Include="YamlTests.fs" />
   </ItemGroup>
   <ItemGroup>
+    <Reference Include="FParsec">
+      <HintPath>..\packages\FParsec.0.9.1\lib\net40\FParsec.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="FParsecCS">
+      <HintPath>..\packages\FParsec.0.9.1\lib\net40\FParsecCS.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
     <Reference Include="mscorlib" />
     <Reference Include="FSharp.Core" />
-    <Reference Include="NaturalSpec">
-      <HintPath>..\packages\NaturalSpec.1.3.4.1\lib\NaturalSpec.dll</HintPath>
-      <Private>True</Private>
-    </Reference>
-    <Reference Include="nunit.framework">
-      <HintPath>..\packages\NUnit.2.5.10.11092\lib\nunit.framework.dll</HintPath>
-      <Private>True</Private>
-    </Reference>
-    <Reference Include="nunit.mocks">
-      <HintPath>..\packages\NUnit.2.5.10.11092\lib\nunit.mocks.dll</HintPath>
-      <Private>True</Private>
-    </Reference>
-    <Reference Include="pnunit.framework">
-      <HintPath>..\packages\NUnit.2.5.10.11092\lib\pnunit.framework.dll</HintPath>
-      <Private>True</Private>
-    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
     <Reference Include="System.Numerics" />
-  </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\Yaml\Yaml.fsproj">
-      <Name>Yaml</Name>
-      <Project>{7ce0ba06-3236-4499-a283-b7a60cc4500a}</Project>
-      <Private>True</Private>
-    </ProjectReference>
   </ItemGroup>
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
 	     Other similar extension points exist, see Microsoft.Common.targets.
