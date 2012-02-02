@@ -18,7 +18,6 @@ module ScalarTypes =
     |> And (doubleParam "0.5" 0.5)
     |> And (doubleParam "-0.5" -0.5)
     |> And (doubleParam "-0.5e-0" -0.5e-0)
-
   [<ScenarioSource "FloatCases">]
   let floatの解析(yaml: string, expected: float) =
     Given yaml
@@ -35,4 +34,27 @@ module ScalarTypes =
     Given yaml
     |> When Yaml.load<float>
     |> It should be nan
+    |> Verify
+
+  [<Example "~">]
+  [<Example "null">]
+  [<Example "Null">]
+  [<Example "NULL">]
+  [<Example "">]
+  let nullの解析(yaml: string) =
+    Given yaml
+    |> When Yaml.load<string option>
+    |> It should equal None
+    |> Verify
+
+  [<Example("'~'", "~")>]
+  [<Example("\"~\"", "~")>]
+  [<Example("'null'", "null")>]
+  [<Example("\"null\"", "null")>]
+  [<Example("''", "")>]
+  [<Example("\"\"", "")>]
+  let nullに解析されない yaml expected =
+    Given yaml
+    |> When Yaml.load<string option>
+    |> It should equal (Some expected)
     |> Verify

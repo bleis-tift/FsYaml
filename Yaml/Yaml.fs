@@ -37,10 +37,12 @@ let surround ch = between (pchar ch) (pchar ch)
 let pquoted =
   manyChars (noneOf "'" <|> (pstring "''" |>> always '\''))
   |> surround '\''
+  |>> Quoted
 let pdquoted =
   manyChars (noneOf "\"" <|> (pstring "\\\"" |>> always '"'))
   |> surround '"'
   |>> Str.replaceEscapeSequence
+  |>> Quoted
 let pstr ends =
   choice [
     pquoted
@@ -121,7 +123,7 @@ let rec plist ty =
     match ty with
     | (ListType _ as ty) -> plist ty |>> unbox
     | (RecordType ty) -> precord ty |>> unbox
-    | PrimitiveType -> pstr ends |>> unbox
+    | PrimitiveType | OptionType _ -> pstr ends |>> unbox
   let plist' p =
     choice [
       attempt (p |> pinline '[' ']')
@@ -149,7 +151,7 @@ and precord ty =
       match getFieldType name with
       | Some(ListType _ as t) -> plist t |>> box
       | Some(RecordType t) -> precord t |>> box
-      | Some(PrimitiveType) -> pstr ends |>> box
+      | Some(PrimitiveType | OptionType _) -> pstr ends |>> box
       | None -> pzero
     return name, value
   }
@@ -161,7 +163,7 @@ and precord ty =
 let pbody = function
 | (ListType _) as t -> plist t
 | RecordType t -> precord t
-| PrimitiveType as t -> manyChars anyChar |>> (Str.trim >> (convValue t))
+| (PrimitiveType | OptionType _) as t -> pstr "" |>> (convValue t) //manyChars anyChar |>> (Str.trim >> (convValue t))
 
 let load<'a> yamlStr: 'a =
   let parser = ws >>. pbody typeof<'a> .>> ws .>> followedBy eof

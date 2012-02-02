@@ -8,16 +8,28 @@ let elemType = function
 | otherwise -> failwith "%s is not list type." otherwise.Name
 
 let convValue ty (x: obj) =
+  let str x =
+    match unbox x with Quoted s | Raw s -> s
+
   let str2float = function
   | ".inf" | ".Inf" | ".INF" | "+.inf" | "+.Inf" | "+.INF" -> infinity
   | "-.inf" | "-.Inf" | "-.INF" -> -infinity
   | ".nan" | ".NaN" | ".NAN" -> nan
   | otherwise -> float otherwise
 
+  let str2option f x =
+    match unbox x with
+    | Raw("~" | "null" | "Null" | "NULL" | "") -> None
+    | Quoted s | Raw s -> Some (f s)
+
   match ty with
-  | IntType -> int (string x) |> box
-  | FloatType -> str2float (string x) |> box
-  | StrType -> string x |> box
+  | IntType -> int (str x) |> box
+  | FloatType -> str2float (str x) |> box
+  | StrType -> str x |> box
+  | Opt IntType -> str2option int x |> box
+  | Opt FloatType -> str2option float x |> box
+  | Opt StrType -> str2option string x |> box
+  | Opt ty -> failwithf "%s is not supported type." ty.Name
   | OtherType ty -> x |> box
 
 /// xs(obj list)をtのlistにする

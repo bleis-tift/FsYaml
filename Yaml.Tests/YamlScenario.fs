@@ -83,12 +83,12 @@ module ``string list`` =
     |> Verify
 
 module 単純なレコード =
-  type t = { Name: string; Age: int }
+  type t = { Name: string option; Age: int option }
   [<Scenario>]
-  let ``{ Name: hoge piyo, Age: 20 }というYAML文字列を{ Name = "hoge piyo"; Age = 20 }に変換できる``() =
+  let ``{ Name: hoge piyo, Age: 20 }というYAML文字列を{ Name = Some "hoge piyo"; Age = Some 20 }に変換できる``() =
     Given "{ Name: hoge piyo, Age: 20 }"
     |> When Yaml.load<t>
-    |> It should equal { Name = "hoge piyo"; Age = 20 }
+    |> It should equal { Name = Some "hoge piyo"; Age = Some 20 }
     |> Verify
 
   [<Scenario>]
@@ -96,7 +96,7 @@ module 単純なレコード =
     Given "Name: hoge piyo\n\
            Age: 20"
     |> When Yaml.load<t>
-    |> It should equal { Name = "hoge piyo"; Age = 20 }
+    |> It should equal { Name = Some "hoge piyo"; Age = Some 20 }
     |> Verify
 
 module ``インラインのstring listを持つレコード`` =
