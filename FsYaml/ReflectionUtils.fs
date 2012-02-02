@@ -57,6 +57,17 @@ let specialize t (xs: obj list) =
   // リストの移し替え
   !(List.foldBack consR xs (ref nilR))
 
+let toMap keyType valType xs =
+  let kvType = FSharpType.MakeTupleType [| keyType; valType |]
+  let mapType = typedefof<Map<_, _>>.MakeGenericType([| keyType; valType |])
+  let makeTuple (k, v) =
+    FSharpValue.MakeTuple ([| convValue keyType k; convValue valType v |], kvType)
+  let xs =
+    xs
+    |> List.map (makeTuple)
+    |> specialize kvType
+  mapType.GetConstructors().[0].Invoke([| xs |])
+
 /// プロパティ名と値のペアのリストを、ty型のレコードに変換する
 let toRecord ty xs =
   let conv xs (field: System.Reflection.PropertyInfo) =
@@ -64,14 +75,7 @@ let toRecord ty xs =
     |> List.find (fst >> ((=)field.Name))
     |> (snd >> (convValue field.PropertyType))
   
-  if ty |> FSharpType.IsRecord then
-    let args =
-      ty |> FSharpType.GetRecordFields
-         |> Array.map (conv xs)
-    FSharpValue.MakeRecord(ty, args)
-  else if ty |> FSharpType.IsUnion then
-    null
-  else if ty = typedefof<Map<_, _>> then
-    null
-  else
-    failwith ""
+  let args =
+    ty |> FSharpType.GetRecordFields
+       |> Array.map (conv xs)
+  FSharpValue.MakeRecord(ty, args)

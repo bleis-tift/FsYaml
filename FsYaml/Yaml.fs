@@ -122,6 +122,7 @@ let rec plist ty =
   let plistElem ty ends =
     match ty with
     | (ListType _ as ty) -> plist ty |>> unbox
+    | MapType (kt, vt) -> pmap kt vt |>> unbox
     | (RecordType ty) -> precord ty |>> unbox
     | PrimitiveType | OptionType _ -> pstr ends |>> unbox
   let plist' p =
@@ -131,6 +132,28 @@ let rec plist ty =
     ]
   let ty = elemType ty
   plist' (plistElem ty) |>> (specialize ty >> unbox)
+and pmap keyType valType =
+  let pmap' p =
+    p >>= fun xs ->
+      try
+        preturn (xs |> toMap keyType valType)
+      with e -> fail e.Message
+
+  let pelem ends = parse {
+    let! name = pstr ":"
+    do! skipAnyOf ":"
+    let! value =
+      match valType with
+      | ListType _ as t -> plist t |>> box
+      | MapType (kt, vt) -> pmap kt vt |>> box
+      | RecordType t -> precord t |>> box
+      | PrimitiveType | OptionType _ -> pstr ends |>> box
+    return name, value
+  }
+  choice [
+    attempt (pelem |> pinline '{' '}' |> pmap')
+    (pelem |> pblock (preturn ()) |> pmap')
+  ]
 /// レコードをパースするパーサを生成する
 and precord ty =
   let precord' p =
@@ -147,6 +170,7 @@ and precord ty =
     let! value =
       match getFieldType name with
       | Some(ListType _ as t) -> plist t |>> box
+      | Some(MapType (kt, vt)) -> pmap kt vt |>> box
       | Some(RecordType t) -> precord t |>> box
       | Some(PrimitiveType | OptionType _) -> pstr ends |>> box
       | None -> pzero
@@ -159,6 +183,7 @@ and precord ty =
 
 let pbody = function
 | (ListType _) as t -> plist t
+| MapType (kt, vt) -> pmap kt vt
 | RecordType t -> precord t
 | (PrimitiveType | OptionType _) as t -> pstr "" |>> (convValue t) //manyChars anyChar |>> (Str.trim >> (convValue t))
 

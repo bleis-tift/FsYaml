@@ -4,7 +4,7 @@ open Microsoft.FSharp.Reflection
 
 type StrLitType = Quoted of string | Raw of string
 
-let (|PrimitiveType|OptionType|ListType|RecordType|) t =
+let (|PrimitiveType|OptionType|ListType|MapType|RecordType|) t =
   let isPrimitive t =
     [ typeof<int>; typeof<float>; typeof<decimal>; typeof<string>; typeof<bool>; ]
     |> List.exists ((=)t)
@@ -17,6 +17,9 @@ let (|PrimitiveType|OptionType|ListType|RecordType|) t =
     OptionType (t.GetGenericArguments().[0])
   else if t.GetGenericTypeDefinition() = typedefof<list<_>> then
     ListType (t.GetGenericArguments().[0])
+  else if t.GetGenericTypeDefinition() = typedefof<Map<_, _>> then
+    let args = t.GetGenericArguments()
+    MapType (args.[0], args.[1])
   else
     failwithf "%s is not supported type." t.Name
 

@@ -82,6 +82,22 @@ module ``string list`` =
     |> It should equal ["hoge"; "piyo"; "foo"]
     |> Verify
 
+module ``Map<string, string>`` =
+  [<Scenario>]
+  let ``{ aaa: bbb, ccc: ddd }というYAML文字列をmap ["aaa", "bbb"; "ccc", "ddd"]に変換できる``() =
+    Given "{ aaa: bbb, ccc: ddd }"
+    |> When Yaml.load<Map<string, string>>
+    |> It should equal (Map.ofList ["aaa", "bbb"; "ccc", "ddd"])
+    |> Verify
+
+  [<Scenario>]
+  let ブロック形式のマップも扱える() =
+    Given "aaa: bbb\n\
+           ccc: ddd"
+    |> When Yaml.load<Map<string, string>>
+    |> It should equal (Map.ofList ["aaa", "bbb"; "ccc", "ddd"])
+    |> Verify
+
 module 単純なレコード =
   type t = { Name: string option; Age: int option }
   [<Scenario>]

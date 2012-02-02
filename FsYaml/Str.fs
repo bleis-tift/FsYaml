@@ -6,7 +6,6 @@ open System.Text.RegularExpressions
 let trim (s: string) = Patterns.Raw (s.Trim())
 
 let replaceEscapeSequence str =
-  printfn "!!!%s" str
   let pat = @"(?:\\b|\\n|\\r|\\t|\\x([0-9a-fA-F]{2})|\\u([0-9a-fA-F]{4})|\\u([0-9a-fA-F]{8})|\\\\)" 
   Regex.Replace(str, pat, fun (m: Match) ->
     match m.Value, m.Length with
