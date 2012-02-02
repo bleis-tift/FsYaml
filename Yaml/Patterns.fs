@@ -2,15 +2,13 @@
 
 open Microsoft.FSharp.Reflection
 
-type PrimitiveT = Int | Str | Double
-
 let (|PrimitiveType|ListType|RecordType|) t =
   if t = typeof<int> then
-    PrimitiveType Int
+    PrimitiveType
   else if t = typeof<string> then
-    PrimitiveType Str
+    PrimitiveType
   else if t = typeof<double> then
-    PrimitiveType Double
+    PrimitiveType
   else if FSharpType.IsRecord t then
     RecordType t
   else if t.GetGenericTypeDefinition() = typedefof<list<_>> then

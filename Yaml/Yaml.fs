@@ -19,6 +19,8 @@ type Parser<'a> = Parser<'a, Context>
 
 let bp x = x
 
+let always x = fun _ -> x
+
 // 基本的なパーサ
 let pcomment = regex @"#[^\n]*" .>> (followedBy (newline |>> ignore <|> eof)) |>> ignore <?> "comment"
 let pspace_inline = choice [ attempt (anyOf " \t" |>> ignore); pcomment ] <?> "space or tab or comment"
@@ -30,44 +32,20 @@ let ws = parse {
   return ()
 }
 let pchar_ws ch = pchar ch .>> ws
-let pint_ws = pint32 .>> many (anyOf [' '; '\t'])
-let pdouble_ws =
-  choice [
-    attempt (pchar '0' |>> float)
-    attempt (pstring ".inf" |>> fun _ -> infinity)
-    attempt (pstring "-.inf" |>> fun _ -> -(infinity))
-    attempt (pstring ".nan" |>> fun _ -> nan)
-    regex @"-?(0|[1-9][0-9]*)(\.[0-9]*)?([eE][-+]?[0-9]+)?" |>> (fun x -> printfn "!!!%A" x; x) |>> float
-  ] .>> many (anyOf [' '; '\t'])
 let pspaces1 = many1 (choice [ attempt (regex @"([ \t]*\n)*[ \t]+" |>> ignore); pcomment ])
 let surround ch = between (pchar ch) (pchar ch)
 let pquoted =
-  manyChars (noneOf "'" <|> (pstring "''" |>> fun _ -> '\''))
+  manyChars (noneOf "'" <|> (pstring "''" |>> always '\''))
   |> surround '\''
 let pdquoted =
-  manyChars (noneOf "\"" <|> (pstring "\\\"" |>> fun _ -> '"'))
+  manyChars (noneOf "\"" <|> (pstring "\\\"" |>> always '"'))
   |> surround '"'
-  |>> fun str ->
-    Regex.Replace(str, @"(?:\\b|\\n|\\r|\\t|\\x([0-9a-fA-F]{2})|\\u([0-9a-fA-F]{4})|\\u([0-9a-fA-F]{8})|\\\\)", fun (m: Match) ->
-      match m.Value, m.Length with
-      | @"\b", _ -> "\b"
-      | @"\n", _ -> "\n"
-      | @"\r", _ -> "\r"
-      | @"\t", _ -> "\t"
-      | @"\\", _ -> "\\"
-      | v, _ when v.StartsWith(@"\x") ->
-        let num = System.Convert.ToInt32((m.Groups.Item 1).Value, 16)
-        System.Char.ConvertFromUtf32(num)
-      | _, n ->
-        let idx = if n = @"\u0000".Length then 2 else 3
-        let num = System.Convert.ToInt32((m.Groups.Item idx).Value, 16)
-        System.Char.ConvertFromUtf32(num)
-    )
+  |>> Str.replaceEscapeSequence
 let pstr ends =
   choice [
     pquoted
     pdquoted
-    manyChars (noneOf (ends + "#")) |>> fun s -> s.Trim()
+    manyChars (noneOf (ends + "#")) |>> Str.trim
   ]
 
 let pushPSpace p c = { c with PSpaceStack = p::c.PSpaceStack }
@@ -137,21 +115,19 @@ let pblock pprefix p =
     return result
   }
 
-/// ty型のリストをパースするパーサを生成する
+/// リストをパースするパーサを生成する
 let rec plist ty =
   let plistElem ty ends =
     match ty with
-    | IntType -> pint_ws |>> unbox
-    | DoubleType -> pdouble_ws |>> unbox
-    | StrType -> pstr ends |>> unbox
-    | OtherType (ListType ty) -> plist ty |>> unbox
-    | OtherType (RecordType ty) -> precord ty |>> unbox
-    | OtherType (PrimitiveType _) -> failwithf "%s is not supported type." ty.Name
+    | (ListType _ as ty) -> plist ty |>> unbox
+    | (RecordType ty) -> precord ty |>> unbox
+    | PrimitiveType -> pstr ends |>> unbox
   let plist' p =
     choice [
       attempt (p |> pinline '[' ']')
       p |> pblock (pchar '-' >>. pspaces1)
     ]
+  let ty = elemType ty
   plist' (plistElem ty) |>> (specialize ty >> unbox)
 /// レコードをパースするパーサを生成する
 and precord ty =
@@ -171,11 +147,9 @@ and precord ty =
     let! name = manyCharsTill anyChar (pchar ':' >>. pspaces1)
     let! value =
       match getFieldType name with
-      | Some(ListType t) -> plist t |>> box
+      | Some(ListType _ as t) -> plist t |>> box
       | Some(RecordType t) -> precord t |>> box
-      | Some(PrimitiveType Int) -> pint_ws |>> box
-      | Some(PrimitiveType Double) -> pdouble_ws |>> box
-      | Some(PrimitiveType Str) -> pstr ends |>> box
+      | Some(PrimitiveType) -> pstr ends |>> box
       | None -> pzero
     return name, value
   }
@@ -185,11 +159,9 @@ and precord ty =
   ]
 
 let pbody = function
-| ListType t -> plist t
+| (ListType _) as t -> plist t
 | RecordType t -> precord t
-| PrimitiveType Int -> pint_ws |>> unbox
-| PrimitiveType Double -> pdouble_ws |>> unbox
-| PrimitiveType Str -> manyChars anyChar |>> (fun s -> unbox (s.Trim()))
+| PrimitiveType as t -> manyChars anyChar |>> (Str.trim >> (convValue t))
 
 let load<'a> yamlStr: 'a =
   let parser = ws >>. pbody typeof<'a> .>> ws .>> followedBy eof

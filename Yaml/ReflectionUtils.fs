@@ -3,6 +3,17 @@
 open Microsoft.FSharp.Reflection
 open Patterns
 
+let elemType = function
+| ListType ty -> ty
+| otherwise -> failwith "%s is not list type." otherwise.Name
+
+let convValue ty (x: obj) =
+  match ty with
+  | IntType -> int (string x) |> box
+  | DoubleType -> double (string x) |> box
+  | StrType -> string x |> box
+  | OtherType ty -> x |> box
+
 /// xs(obj list)をtのlistにする
 /// (unboxするだけでは、obj listをint list等に変換できずに落ちる)
 let specialize t (xs: obj list) =
@@ -12,7 +23,7 @@ let specialize t (xs: obj list) =
     cases.[0], cases.[1]
   // リフレクションを使ったcons
   let consR x xs =
-    ref (FSharpValue.MakeUnion(cons, [| x; !xs |]))
+    ref (FSharpValue.MakeUnion(cons, [| convValue t x; !xs |]))
   // リフレクションを使ったnil
   let nilR = FSharpValue.MakeUnion(nil, [||])
   // リストの移し替え
@@ -20,15 +31,10 @@ let specialize t (xs: obj list) =
 
 /// プロパティ名と値のペアのリストを、ty型のレコードに変換する
 let toRecord ty xs =
-  let convTo t (x: obj) =
-    match t with
-    | IntType -> int (string x) |> box
-    | DoubleType -> double (string x) |> box
-    | StrType | OtherType _ -> x
   let conv (field: System.Reflection.PropertyInfo) =
     xs
     |> List.find (fst >> ((=)field.Name))
-    |> (snd >> (convTo field.PropertyType))
+    |> (snd >> (convValue field.PropertyType))
   
   if ty |> FSharpType.IsRecord then
     let args =
