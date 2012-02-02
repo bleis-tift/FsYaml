@@ -37,6 +37,7 @@
     <Compile Include="YamlScenario.fs" />
     <None Include="packages.config" />
     <Compile Include="YamlExamples.fs" />
+    <Compile Include="YamlTests.fs" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="mscorlib" />

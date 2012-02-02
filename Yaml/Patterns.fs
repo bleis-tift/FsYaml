@@ -16,8 +16,8 @@ let (|PrimitiveType|ListType|RecordType|) t =
   else
     failwithf "%s is not supported type." t.Name
 
-let (|IntType|StrType|DoubleType|OtherType|) t =
+let (|IntType|FloatType|StrType|OtherType|) t =
   if t = typeof<int> then IntType
+  else if t = typeof<float> then FloatType
   else if t = typeof<string> then StrType
-  else if t = typeof<double> then DoubleType
   else OtherType t

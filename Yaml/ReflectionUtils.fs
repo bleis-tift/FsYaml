@@ -8,9 +8,15 @@ let elemType = function
 | otherwise -> failwith "%s is not list type." otherwise.Name
 
 let convValue ty (x: obj) =
+  let str2float = function
+  | ".inf" | ".Inf" | ".INF" | "+.inf" | "+.Inf" | "+.INF" -> infinity
+  | "-.inf" | "-.Inf" | "-.INF" -> -infinity
+  | ".nan" | ".NaN" | ".NAN" -> nan
+  | otherwise -> float otherwise
+
   match ty with
   | IntType -> int (string x) |> box
-  | DoubleType -> double (string x) |> box
+  | FloatType -> str2float (string x) |> box
   | StrType -> string x |> box
   | OtherType ty -> x |> box
 
@@ -31,7 +37,7 @@ let specialize t (xs: obj list) =
 
 /// プロパティ名と値のペアのリストを、ty型のレコードに変換する
 let toRecord ty xs =
-  let conv (field: System.Reflection.PropertyInfo) =
+  let conv xs (field: System.Reflection.PropertyInfo) =
     xs
     |> List.find (fst >> ((=)field.Name))
     |> (snd >> (convValue field.PropertyType))
@@ -39,7 +45,7 @@ let toRecord ty xs =
   if ty |> FSharpType.IsRecord then
     let args =
       ty |> FSharpType.GetRecordFields
-         |> Array.map conv
+         |> Array.map (conv xs)
     FSharpValue.MakeRecord(ty, args)
   else if ty |> FSharpType.IsUnion then
     null
