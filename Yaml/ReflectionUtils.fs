@@ -32,10 +32,12 @@ let convValue (ty: System.Type) (x: obj) =
   match ty with
   | IntType -> int (str x) |> box
   | FloatType -> str2float (str x) |> box
+  | DecimalType -> decimal (str x) |> box
   | StrType -> str x |> box
   | BoolType -> str2bool (str x) |> box
   | Opt IntType -> str2option int x |> box
   | Opt FloatType -> str2option float x |> box
+  | Opt DecimalType -> str2option decimal x |> box
   | Opt StrType -> str2option string x |> box
   | Opt ty -> failwithf "%s is not supported type." ty.Name
   | OtherType ty -> x |> box

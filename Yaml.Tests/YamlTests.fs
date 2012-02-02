@@ -36,6 +36,17 @@ module ScalarTypes =
     |> It should be nan
     |> Verify
 
+  let DecimalCases =
+    TestWith (doubleParam "0.5" 0.5m)
+    |> And (doubleParam "-0.5" -0.5m)
+    |> And (doubleParam "0" 0m)
+  [<ScenarioSource "DecimalCases">]
+  let decimalの解析 yaml expected =
+    Given yaml
+    |> When Yaml.load<decimal>
+    |> It should equal expected
+    |> Verify
+
   [<Example "~">]
   [<Example "null">]
   [<Example "Null">]
