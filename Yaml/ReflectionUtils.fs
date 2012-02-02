@@ -7,9 +7,11 @@ let elemType = function
 | ListType ty -> ty
 | otherwise -> failwith "%s is not list type." otherwise.Name
 
-let convValue ty (x: obj) =
+let convValue (ty: System.Type) (x: obj) =
   let str x =
-    match unbox x with Quoted s | Raw s -> s
+    match unbox x with
+    | Raw("~" | "null" | "Null" | "NULL" | "") -> failwithf "this type(%s) does not allow null value." (ty.Name)
+    | Raw s | Quoted s -> s
 
   let str2float = function
   | ".inf" | ".Inf" | ".INF" | "+.inf" | "+.Inf" | "+.INF" -> infinity

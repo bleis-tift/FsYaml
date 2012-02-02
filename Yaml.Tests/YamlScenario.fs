@@ -216,3 +216,14 @@ module 複雑なYAML =
     |> It should equal [ { a = [ "a1"; "a2"; "a3" ]; b = [ "b1"; "b2" ] }
                          { b = [ "aa1"; "aa2" ]; a = [ "bb1" ] } ]
     |> Verify
+
+module optionを含まない型にnullが来た場合 =
+  type t = { Hoge: string }
+  [<Example "Hoge: ">]
+  [<Example "Hoge: ~">]
+  [<Example "Hoge: null">]
+  [<FailsWithType (typeof<System.Exception>) >]
+  let stringにnullが来た場合 yaml =
+    Given yaml
+    |> When Yaml.load<t>
+    |> Verify

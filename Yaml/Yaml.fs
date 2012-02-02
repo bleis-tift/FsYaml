@@ -134,13 +134,10 @@ let rec plist ty =
 /// レコードをパースするパーサを生成する
 and precord ty =
   let precord' p =
-    let msg = ref ""
-    parse {
-      let! xs = p
+    p >>= fun xs ->
       try
-        return xs |> toRecord ty
-      with e -> msg := e.Message
-    } <?> !msg
+        preturn (xs |> toRecord ty)
+      with e -> fail e.Message
   
   let getFieldType name =
     let prop = ty |> FSharpType.GetRecordFields |> Array.tryFind (fun p -> p.Name = name)
