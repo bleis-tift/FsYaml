@@ -134,7 +134,8 @@ let rec plist ty =
     match ty with
     | (ListType _ as ty) -> plist ty |>> unbox
     | MapType (kt, vt) -> pmap kt vt |>> unbox
-    | (RecordType ty) -> precord ty |>> unbox
+    | UnionType t -> punion t |>> unbox
+    | RecordType ty -> precord ty |>> unbox
     | PrimitiveType | OptionType _ -> pstrUntil ends |>> unbox
   let plist' p =
     choice [
@@ -149,6 +150,7 @@ and pnameval pname valTypeF ends = parse {
     match valTypeF name with
     | Some(ListType _ as t) -> plist t |>> box
     | Some(MapType (kt, vt)) -> pmap kt vt |>> box
+    | Some(UnionType t) -> punion t |>> box
     | Some(RecordType t) -> precord t |>> box
     | Some(PrimitiveType | OptionType _) -> pstrUntil ends |>> box
     | None -> pzero
@@ -159,6 +161,14 @@ and pmap keyType valType =
   let pname = pstrUntil ":" .>> skipAnyOf ":"
   let pelem = pnameval pname (always (Some valType))
   pyamlmap pelem (toMap keyType valType)
+/// 判別共用体をパースするパーサを生成する
+and punion ty =
+  let getFieldType name =
+    let c = FSharpType.GetUnionCases ty |> Array.tryFind (fun c -> c.Name = name)
+    c |> Option.map (fun c -> c.GetFields().[0].PropertyType)
+  let pname = manyCharsTill anyChar (pchar ':' >>. pspaces1)
+  let pfield = pnameval pname getFieldType
+  pyamlmap pfield (toUnion ty)
 /// レコードをパースするパーサを生成する
 and precord ty =
   let getFieldType name =
@@ -171,6 +181,7 @@ and precord ty =
 let pbody = function
 | (ListType _) as t -> plist t
 | MapType (kt, vt) -> pmap kt vt
+| UnionType t -> punion t
 | RecordType t -> precord t
 | (PrimitiveType | OptionType _) as t -> pstrUntil "" |>> (convValue t)
 

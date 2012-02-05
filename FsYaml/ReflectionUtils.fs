@@ -68,6 +68,14 @@ let toMap keyType valType xs =
     |> specialize kvType
   mapType.GetConstructors().[0].Invoke([| xs |])
 
+/// ケース識別子と値のペアを、ty型の判別共用体に変換する
+let toUnion ty xs =
+  match xs with
+  | [(case, value)] ->
+      let c = FSharpType.GetUnionCases(ty) |> Array.find (fun c -> c.Name = case)
+      FSharpValue.MakeUnion(c, [| value |])
+  | _ -> failwith "oops!"
+
 /// プロパティ名と値のペアのリストを、ty型のレコードに変換する
 let toRecord ty xs =
   let conv xs (field: System.Reflection.PropertyInfo) =

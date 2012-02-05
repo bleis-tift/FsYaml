@@ -199,6 +199,25 @@ module ``レコードのレコードのリスト`` =
                          { Person = { Name = "foo bar"; Age = 30 }; Communities = ["Java"; "C#"] } ]
     |> Verify
 
+module ``判別共用体`` =
+  type LocalInfo = { Path: string }
+  type RedmineInfo = { BaseUrl: string; ProjectId: string; AccessKey: string }
+  type GithubInfo = { ProjectId: string }
+  type TicketSource =
+  | Local of LocalInfo
+  | Redmine of RedmineInfo
+  | Github of GithubInfo
+  [<Scenario>]
+  let OK() =
+    Given("- Github: { ProjectId: bleis-tift/FsYaml }\n" +
+          "- Redmine:\n" +
+          "    BaseUrl: http://rdm/\n" +
+          "    ProjectId: project001\n" +
+          "    AccessKey: aaa")
+    |> When Yaml.load<TicketSource list>
+    |> It should equal [ Github { ProjectId = "bleis-tift/FsYaml" }; Redmine { BaseUrl = "http://rdm/"; ProjectId = "project001"; AccessKey = "aaa" } ]
+    |> Verify
+
 module ブロックのブロック =
   [<Scenario>]
   let OK() =
@@ -208,29 +227,6 @@ module ブロックのブロック =
           "  - 'C#'")
     |> When Yaml.load<string list list>
     |> It should equal [ [ "F#"; "Scala" ]; [ "Java"; "C#"] ]
-    |> Verify
-
-module 複雑なYAML =
-  type t = { a: string list; b: string list }
-  [<Scenario>]
-  let OK() =
-    Given("- a:\n" +
-          "  - a1\n" +
-          "  - a2\n" +
-          "  - a3\n" +
-          "  b:\n" +
-          "  - b1\n" +
-          "  - b2\n" +
-          "- b:\n" +
-          "  - aa1\n" +
-          "  - aa2\n" +
-          "  a:\n" +
-          "     \n" +
-          "  \n" +
-          "  - bb1")
-    |> When Yaml.load<t list>
-    |> It should equal [ { a = [ "a1"; "a2"; "a3" ]; b = [ "b1"; "b2" ] }
-                         { b = [ "aa1"; "aa2" ]; a = [ "bb1" ] } ]
     |> Verify
 
 module optionを含まない型にnullが来た場合 =
