@@ -43,12 +43,17 @@ let pdquoted =
   |> surround '"'
   |>> Str.replaceEscapeSequence
   |>> Quoted
-let pstr ends =
+let pstrUntil ends =
   choice [
     pquoted
     pdquoted
     manyChars (noneOf (ends + "#")) |>> Str.trim
   ]
+let map f p =
+  p >>= fun xs ->
+    try
+      preturn (f xs)
+    with e -> fail e.Message
 
 let pushPSpace p c = { c with PSpaceStack = p::c.PSpaceStack }
 let popPSpace c = { c with PSpaceStack = c.PSpaceStack.Tail }
@@ -117,6 +122,12 @@ let pblock pprefix p =
     return result
   }
 
+let pyamlmap pelem convF =
+  choice [
+    attempt (pelem |> pinline '{' '}' |> map convF)
+    (pelem |> pblock (preturn ()) |> map convF)
+  ]
+
 /// リストをパースするパーサを生成する
 let rec plist ty =
   let plistElem ty ends =
@@ -124,7 +135,7 @@ let rec plist ty =
     | (ListType _ as ty) -> plist ty |>> unbox
     | MapType (kt, vt) -> pmap kt vt |>> unbox
     | (RecordType ty) -> precord ty |>> unbox
-    | PrimitiveType | OptionType _ -> pstr ends |>> unbox
+    | PrimitiveType | OptionType _ -> pstrUntil ends |>> unbox
   let plist' p =
     choice [
       attempt (p |> pinline '[' ']')
@@ -132,60 +143,36 @@ let rec plist ty =
     ]
   let ty = elemType ty
   plist' (plistElem ty) |>> (specialize ty >> unbox)
+and pnameval pname valTypeF ends = parse {
+  let! name = pname
+  let! value =
+    match valTypeF name with
+    | Some(ListType _ as t) -> plist t |>> box
+    | Some(MapType (kt, vt)) -> pmap kt vt |>> box
+    | Some(RecordType t) -> precord t |>> box
+    | Some(PrimitiveType | OptionType _) -> pstrUntil ends |>> box
+    | None -> pzero
+  return name, value
+ }
+/// マップをパースするパーサを生成する
 and pmap keyType valType =
-  let pmap' p =
-    p >>= fun xs ->
-      try
-        preturn (xs |> toMap keyType valType)
-      with e -> fail e.Message
-
-  let pelem ends = parse {
-    let! name = pstr ":"
-    do! skipAnyOf ":"
-    let! value =
-      match valType with
-      | ListType _ as t -> plist t |>> box
-      | MapType (kt, vt) -> pmap kt vt |>> box
-      | RecordType t -> precord t |>> box
-      | PrimitiveType | OptionType _ -> pstr ends |>> box
-    return name, value
-  }
-  choice [
-    attempt (pelem |> pinline '{' '}' |> pmap')
-    (pelem |> pblock (preturn ()) |> pmap')
-  ]
+  let pname = pstrUntil ":" .>> skipAnyOf ":"
+  let pelem = pnameval pname (always (Some valType))
+  pyamlmap pelem (toMap keyType valType)
 /// レコードをパースするパーサを生成する
 and precord ty =
-  let precord' p =
-    p >>= fun xs ->
-      try
-        preturn (xs |> toRecord ty)
-      with e -> fail e.Message
-  
   let getFieldType name =
     let prop = ty |> FSharpType.GetRecordFields |> Array.tryFind (fun p -> p.Name = name)
     prop |> Option.map (fun p -> p.PropertyType)
-  let pfield ends = parse {
-    let! name = manyCharsTill anyChar (pchar ':' >>. pspaces1)
-    let! value =
-      match getFieldType name with
-      | Some(ListType _ as t) -> plist t |>> box
-      | Some(MapType (kt, vt)) -> pmap kt vt |>> box
-      | Some(RecordType t) -> precord t |>> box
-      | Some(PrimitiveType | OptionType _) -> pstr ends |>> box
-      | None -> pzero
-    return name, value
-  }
-  choice [
-    attempt (pfield |> pinline '{' '}' |> precord')
-    (pfield |> pblock (preturn ()) |> precord')
-  ]
+  let pname = manyCharsTill anyChar (pchar ':' >>. pspaces1)
+  let pfield = pnameval pname getFieldType
+  pyamlmap pfield (toRecord ty)
 
 let pbody = function
 | (ListType _) as t -> plist t
 | MapType (kt, vt) -> pmap kt vt
 | RecordType t -> precord t
-| (PrimitiveType | OptionType _) as t -> pstr "" |>> (convValue t) //manyChars anyChar |>> (Str.trim >> (convValue t))
+| (PrimitiveType | OptionType _) as t -> pstrUntil "" |>> (convValue t)
 
 let load<'a> yamlStr: 'a =
   let parser = ws >>. pbody typeof<'a> .>> ws .>> followedBy eof
