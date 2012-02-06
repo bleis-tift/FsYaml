@@ -14,8 +14,6 @@ let dumpString str =
   else
     str
 
-let dumpInt i = string i
-
 let dumpFloat f =
   let (|Infinity|NegativeInfinity|NaN|Float|)f =
     if System.Double.IsNaN f then NaN
@@ -23,7 +21,6 @@ let dumpFloat f =
     else if f = -infinity then NegativeInfinity
     else Float f
 
-  let nInfinity = -infinity
   match f with
   | Infinity -> ".inf"
   | NegativeInfinity -> "-.inf"
@@ -37,5 +34,6 @@ let dump (o: obj) =
   | IntType -> string o
   | FloatType -> dumpFloat (o :?> float)
   | DecimalType -> string o
+  | BoolType -> o |> string |> Str.lower
   | _ -> failwith "未実装なんですけど"
   
