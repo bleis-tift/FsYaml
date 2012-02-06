@@ -22,3 +22,5 @@ let replaceEscapeSequence str =
       let num = Convert.ToInt32((m.Groups.Item idx).Value, 16)
       Char.ConvertFromUtf32(num)
   )
+
+let lower str = (str: string).ToLower()

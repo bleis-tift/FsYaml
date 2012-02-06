@@ -66,3 +66,16 @@ module DecimalDump =
     |> When Yaml.dump
     |> It should equal expected
     |> Verify
+
+[<TestFixture>]
+module BoolDump =
+  let Cases =
+    TestWith (doubleParam true "true")
+    |> And (doubleParam false "false")
+
+  [<ScenarioSource "Cases">]
+  let test (input: bool) (expected: string) =
+    Given input
+    |> When Yaml.dump
+    |> It should equal expected
+    |> Verify
