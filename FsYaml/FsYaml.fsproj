@@ -37,6 +37,7 @@
     <Compile Include="Patterns.fs" />
     <Compile Include="ReflectionUtils.fs" />
     <Compile Include="Str.fs" />
+    <Compile Include="YamlDump.fs" />
     <Compile Include="Yaml.fs" />
     <None Include="packages.config" />
   </ItemGroup>

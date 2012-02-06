@@ -37,6 +37,7 @@
     <Compile Include="YamlScenario.fs" />
     <Compile Include="YamlExamples.fs" />
     <Compile Include="YamlTests.fs" />
+    <Compile Include="YamlDumpTests.fs" />
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
