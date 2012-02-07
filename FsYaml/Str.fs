@@ -24,3 +24,5 @@ let replaceEscapeSequence str =
   )
 
 let lower str = (str: string).ToLower()
+
+let join sep (str: #obj seq) = System.String.Join(sep, Array.ofSeq str)
