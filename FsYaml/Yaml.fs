@@ -181,4 +181,4 @@ let load<'a> yamlStr: 'a =
   | Success(res, _, _) -> unbox res
   | Failure(msg, err, state) -> failwithf "msg: %s\nerr: %A\nstate: %A" msg err state
 
-let dump = YamlDump.dump
+let dump x = YamlDump.dump 0 x

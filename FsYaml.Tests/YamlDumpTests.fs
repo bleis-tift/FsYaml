@@ -71,3 +71,27 @@ module PrimitiveDump =
     |> When Yaml.dump
     |> It should equal expected
     |> Verify
+
+[<TestFixture>]
+module RecordDump =
+  type t1 = { name: string; value: int }
+  [<Scenario>]
+  let 値がプリミティブなrecordをdumpできる() =
+    let o = { name = "あいうえお"; value = 3 } : t1
+    Given o
+    |> When Yaml.dump
+    |> It should equal ("name: あいうえお\n" +
+                        "value: 3")
+    |> Verify
+
+  type t2 = { id: int; value: t1 }
+  [<Scenario>]
+  let 値にrecordを持つrecordをdumpできる() =
+    let o = { id = 40; value = { name = "かきくけこ"; value = 90 } }
+    Given o
+    |> When Yaml.dump
+    |> It should equal ("id: 40\n" +
+                        "value: \n" +
+                        "  name: かきくけこ\n" +
+                        "  value: 90")
+    |> Verify
