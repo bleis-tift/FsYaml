@@ -4,39 +4,35 @@ open NUnit.Framework
 open NaturalSpec
 
 [<TestFixture>]
-module StringDump =
-  let Cases =
+module PrimitiveDump =
+  let StringCases =
     TestWith (doubleParam "あいうえお" "あいうえお")
     |> And (doubleParam "かきくけこ" "かきくけこ")
     |> And (doubleParam "かきくけ\"こ" "\"かきくけ\\\"こ\"")
     |> And (doubleParam "かきく\r\nけこ" "\"かきく\r\nけこ\"")
     |> And (doubleParam "かきく\bけこ" "\"かきく\bけこ\"")
 
-  [<ScenarioSource "Cases">]
-  let test (input: string) (expected: string) =
+  [<ScenarioSource "StringCases">]
+  let stringをdumpできる (input: string) (expected: string) =
     Given input
     |> When Yaml.dump
     |> It should equal expected
     |> Verify
 
-[<TestFixture>]
-module IntDump =
-  let Cases =
+  let IntCases =
     TestWith (doubleParam 1 "1")
     |> And (doubleParam 0 "0")
     |> And (doubleParam -56 "-56")
     |> And (doubleParam 3000 "3000")
 
-  [<ScenarioSource "Cases">]
-  let test (input: int) (expected: string) =
+  [<ScenarioSource "IntCases">]
+  let intをdumpできる (input: int) (expected: string) =
     Given input
     |> When Yaml.dump
     |> It should equal expected
     |> Verify
 
-[<TestFixture>]
-module FloatDump =
-  let Cases =
+  let FloatCases =
     TestWith (doubleParam 1.5 "1.5")
     |> And (doubleParam 30.5 "30.5")
     |> And (doubleParam 0 "0")
@@ -45,36 +41,32 @@ module FloatDump =
     |> And (doubleParam -infinity "-.inf")
     |> And (doubleParam nan ".nan")
 
-  [<ScenarioSource "Cases">]
-  let test (input: float) (expected: string) =
+  [<ScenarioSource "FloatCases">]
+  let floatをdumpできる (input: float) (expected: string) =
     Given input
     |> When Yaml.dump
     |> It should equal expected
     |> Verify
 
-[<TestFixture>]
-module DecimalDump =
-  let Cases =
+  let DecimalCases =
     TestWith (doubleParam 1.5m "1.5")
     |> And (doubleParam 30.6m "30.6")
     |> And (doubleParam 0m "0")
     |> And (doubleParam -2.8m "-2.8")
 
-  [<ScenarioSource "Cases">]
-  let test (input: decimal) (expected: string) =
+  [<ScenarioSource "DecimalCases">]
+  let decimalをdumpできる (input: decimal) (expected: string) =
     Given input
     |> When Yaml.dump
     |> It should equal expected
     |> Verify
 
-[<TestFixture>]
-module BoolDump =
-  let Cases =
+  let BoolCases =
     TestWith (doubleParam true "true")
     |> And (doubleParam false "false")
 
-  [<ScenarioSource "Cases">]
-  let test (input: bool) (expected: string) =
+  [<ScenarioSource "BoolCases">]
+  let boolをdumpできる (input: bool) (expected: string) =
     Given input
     |> When Yaml.dump
     |> It should equal expected
