@@ -65,6 +65,24 @@ and dumpInlineMap values =
     |> List.map (fun (name, value) -> (string name) + ": " + (dumpPrimitive value))
     |> Str.join ", "
   "{ " + items + " }"
+and dumpBlockList level values =
+  let result =
+    values
+    |> List.map (fun value ->
+         let value = dump (level + 1) value
+         new System.String(' ', level * 2) + "- " + value
+       )
+    |> Str.join "\n"
+  if level = 0 then
+    result
+  else
+    "\n" + result
+and dumpInlineList values =
+  let items =
+    values
+    |> List.map dumpPrimitive
+    |> Str.join ", "
+  "[ " + items + " ]"
 and dumpMap level x =
   x.GetType().GetGenericArguments().[1]
   |> function
@@ -78,11 +96,23 @@ and dumpMap level x =
          |> normalizeMap
          |> Map.toList
          |> dumpBlockMap level
+and dumpList level x =
+  x.GetType().GetGenericArguments().[0]
+  |> function
+     | PrimitiveType ->
+         x
+         |> normalizeList
+         |> dumpInlineList
+     | _ ->
+         x
+         |> normalizeList
+         |> dumpBlockList level
 and dump level (x: obj) =
   let t = x.GetType()
   match t with
   | PrimitiveType -> dumpPrimitive x
-  | RecordType t -> x |> recordValues |> dumpBlockMap level 
-  | MapType t -> dumpMap level x
+  | RecordType _ -> x |> recordValues |> dumpBlockMap level 
+  | MapType _ -> dumpMap level x
+  | ListType _ -> dumpList level x
   | _ -> failwith "未実装なんですけど"
   

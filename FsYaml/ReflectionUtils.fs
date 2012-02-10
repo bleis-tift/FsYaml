@@ -70,8 +70,9 @@ let toMap keyType valType xs =
     |> specialize kvType
   mapType.GetConstructors().[0].Invoke([| xs |])
 
+let asm = typedefof<Map<_, _>>.Assembly
+
 let normalizeMap (x: obj): Map<IComparable, obj> =
-  let asm = typedefof<Map<_, _>>.Assembly
   let mapType k v = typedefof<Map<_, _>>.MakeGenericType([| k; v |])
   let keyType = x.GetType().GetGenericArguments().[0]
   let valueType = x.GetType().GetGenericArguments().[1]
@@ -95,6 +96,24 @@ let normalizeMap (x: obj): Map<IComparable, obj> =
   iter.Invoke(null, [| iterFun; listed |]) |> ignore
   
   !result
+
+let normalizeList (x: obj) : obj list =
+  let listType v = typedefof<_ list>.MakeGenericType([| v |])
+  let valueType = x.GetType().GetGenericArguments().[0]
+  let inType = listType valueType
+  let outType = listType typedefof<obj>
+
+  let listModule = asm.GetType("Microsoft.FSharp.Collections.ListModule")
+  let iter = listModule.GetMethod("Iterate").MakeGenericMethod(valueType)
+  let iterFunType = FSharpType.MakeFunctionType(valueType, typedefof<unit>)
+  let result = ref []
+  let iterFunImpl = fun x ->
+                      result := (box x) :: !result
+                      box ()
+  let iterFun = FSharpValue.MakeFunction(iterFunType, iterFunImpl)
+  iter.Invoke(null, [| iterFun; x |]) |> ignore
+
+  List.rev !result
 
 /// ケース識別子と値のペアを、ty型の判別共用体に変換する
 let toUnion ty xs =

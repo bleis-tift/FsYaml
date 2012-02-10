@@ -118,3 +118,29 @@ module MapDump =
                         "  name: TWO\n" +
                         "  value: 2")
     |> Verify
+
+[<TestFixture>]
+module ListDump =
+  [<Scenario>]
+  let 値がプリミティブなlistをdumpできる() =
+    Given [ 2; 3; 4; 5 ]
+    |> When Yaml.dump
+    |> It should equal "[ 2, 3, 4, 5 ]"
+    |> Verify
+
+  type t = { name: string; value: int }
+  let makeT name value = { name = name; value = value; }
+  [<Scenario>]
+  let 値がrecordなlistをdumpできる() =
+    Given [
+      makeT "a" 1
+      makeT "b" 2
+    ]
+    |> When Yaml.dump
+    |> It should equal ("- \n" +
+                        "  name: a\n" +
+                        "  value: 1\n" +
+                        "- \n" +
+                        "  name: b\n" +
+                        "  value: 2")
+    |> Verify
