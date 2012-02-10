@@ -6,6 +6,7 @@ open System.Text
 open Microsoft.FSharp.Reflection
 
 open Patterns
+open ReflectionUtils
 
 let dumpString str =
   let pat = @"[\b\r\n\t""]"
@@ -55,11 +56,20 @@ let rec dumpBlockMap level (x: obj) =
     result
   else
     "\n" + result
-
+and dumpMap level (x: obj) =
+  let m = normalizeMap x
+  let items =
+    Map.toList m
+    |> List.map (fun (name, value) ->
+         (string name) + ": " + (dumpPrimitive value)
+       )
+    |> Str.join ", "
+  "{ " + items + " }"
 and dump level (x: obj) =
   let t = x.GetType()
   match t with
   | PrimitiveType -> dumpPrimitive x
   | RecordType t -> dumpBlockMap level x
+  | MapType t -> dumpMap level x
   | _ -> failwith "未実装なんですけど"
   

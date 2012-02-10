@@ -1,5 +1,7 @@
 ﻿module ReflectionUtils
 
+open System
+open System.Reflection
 open Microsoft.FSharp.Reflection
 open Patterns
 
@@ -67,6 +69,33 @@ let toMap keyType valType xs =
     |> List.map (makeTuple)
     |> specialize kvType
   mapType.GetConstructors().[0].Invoke([| xs |])
+
+let normalizeMap (x: obj): Map<IComparable, obj> =
+  let asm = typedefof<Map<_, _>>.Assembly
+  let mapType k v = typedefof<Map<_, _>>.MakeGenericType([| k; v |])
+  let keyType = x.GetType().GetGenericArguments().[0]
+  let valueType = x.GetType().GetGenericArguments().[1]
+  let kvType = FSharpType.MakeTupleType([| keyType; valueType |])
+  let inType = mapType keyType valueType
+  let outType = mapType typedefof<IComparable> typedefof<obj>
+  
+  let mapModule = asm.GetType("Microsoft.FSharp.Collections.MapModule")
+  let toList = mapModule.GetMethod("ToList").MakeGenericMethod(keyType, valueType)
+  let listed = toList.Invoke(null, [| x |])
+  printfn "!!!%A" listed
+
+  let listModule = asm.GetType("Microsoft.FSharp.Collections.ListModule")
+  let iter = listModule.GetMethod("Iterate").MakeGenericMethod(kvType)
+  let iterFunType = FSharpType.MakeFunctionType(kvType, typedefof<unit>)
+  let result = ref Map.empty
+  let iterFunImpl = fun x ->
+                      let values = FSharpValue.GetTupleFields(x)
+                      result := !result |> Map.add (values.[0] :?> IComparable) (values.[1])
+                      box ()
+  let iterFun = FSharpValue.MakeFunction(iterFunType, iterFunImpl)
+  iter.Invoke(null, [| iterFun; listed |]) |> ignore
+  
+  !result
 
 /// ケース識別子と値のペアを、ty型の判別共用体に変換する
 let toUnion ty xs =
