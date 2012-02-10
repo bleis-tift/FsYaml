@@ -95,3 +95,13 @@ module RecordDump =
                         "  name: かきくけこ\n" +
                         "  value: 90")
     |> Verify
+
+[<TestFixture>]
+module MapDump =
+  [<Scenario>]
+  let 値がプリミティブのmapをdumpできる() =
+    Given (Map.ofList [ "one", 1; "two", 2; "three", 3; ])
+    |> When Yaml.dump
+    |> It should equal "{ one: 1, three: 3, two: 2 }" // key の昇順になる
+    |> Verify
+    
