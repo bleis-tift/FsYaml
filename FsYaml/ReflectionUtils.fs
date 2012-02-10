@@ -82,7 +82,6 @@ let normalizeMap (x: obj): Map<IComparable, obj> =
   let mapModule = asm.GetType("Microsoft.FSharp.Collections.MapModule")
   let toList = mapModule.GetMethod("ToList").MakeGenericMethod(keyType, valueType)
   let listed = toList.Invoke(null, [| x |])
-  printfn "!!!%A" listed
 
   let listModule = asm.GetType("Microsoft.FSharp.Collections.ListModule")
   let iter = listModule.GetMethod("Iterate").MakeGenericMethod(kvType)
