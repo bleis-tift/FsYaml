@@ -1,5 +1,6 @@
 ﻿module YamlDump
 
+open System
 open System.Text.RegularExpressions
 open System.Text
 
@@ -42,34 +43,46 @@ let dumpPrimitive (x: obj) =
 
 let recordValues x =
   FSharpType.GetRecordFields (x.GetType())
-  |> Seq.map (fun info -> info.Name, info.GetValue(x, null))
+  |> Seq.map (fun info -> info.Name :> IComparable, info.GetValue(x, null))
+  |> List.ofSeq
 
-let rec dumpBlockMap level (x: obj) =
+let rec dumpBlockMap level values =
   let result =
-    x
-    |> recordValues
-    |> Seq.map (fun (name, value) ->
-         new System.String(' ', level * 2) + name + ": " + (dump (level + 1) value)
+    values
+    |> List.map (fun (name, value) ->
+         let name = string name
+         let value = dump (level + 1) value
+         new System.String(' ', level * 2) + name + ": " + value
     )
     |> Str.join "\n"
   if level = 0 then
     result
   else
     "\n" + result
-and dumpMap level (x: obj) =
-  let m = normalizeMap x
+and dumpInlineMap values =
   let items =
-    Map.toList m
-    |> List.map (fun (name, value) ->
-         (string name) + ": " + (dumpPrimitive value)
-       )
+    values
+    |> List.map (fun (name, value) -> (string name) + ": " + (dumpPrimitive value))
     |> Str.join ", "
   "{ " + items + " }"
+and dumpMap level x =
+  x.GetType().GetGenericArguments().[1]
+  |> function
+     | PrimitiveType ->
+         x
+         |> normalizeMap
+         |> Map.toList
+         |> dumpInlineMap
+     | _ ->
+         x
+         |> normalizeMap
+         |> Map.toList
+         |> dumpBlockMap level
 and dump level (x: obj) =
   let t = x.GetType()
   match t with
   | PrimitiveType -> dumpPrimitive x
-  | RecordType t -> dumpBlockMap level x
+  | RecordType t -> x |> recordValues |> dumpBlockMap level 
   | MapType t -> dumpMap level x
   | _ -> failwith "未実装なんですけど"
   

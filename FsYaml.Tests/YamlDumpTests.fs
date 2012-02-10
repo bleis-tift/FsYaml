@@ -105,3 +105,16 @@ module MapDump =
     |> It should equal "{ one: 1, three: 3, two: 2 }" // key の昇順になる
     |> Verify
     
+  type t = { name: string; value: int }
+  let makeT name value = { name = name; value = value }
+  [<Scenario>]
+  let 値がプリミティブ以外のmapをdumpできる() =
+    Given (Map.ofList [ "one", makeT "ONE" 1; "two", makeT "TWO" 2; ])
+    |> When Yaml.dump
+    |> It should equal ("one: \n" +
+                        "  name: ONE\n" +
+                        "  value: 1\n" +
+                        "two: \n" +
+                        "  name: TWO\n" +
+                        "  value: 2")
+    |> Verify
