@@ -31,7 +31,7 @@ let dumpFloat f =
   | NaN -> ".nan"
   | Float f -> string f
 
-let dumpPrimitive (x: obj) =
+let dumpPrimitive level (x: obj) =
   let t = x.GetType()
   match t with
   | StrType -> dumpString (x :?> string)
@@ -46,73 +46,77 @@ let recordValues x =
   |> Seq.map (fun info -> info.Name :> IComparable, info.GetValue(x, null))
   |> List.ofSeq
 
-let rec dumpBlockMap level values =
+let dumpBlock dump level values =
   let result =
     values
-    |> List.map (fun (name, value) ->
-         let name = string name
-         let value = dump (level + 1) value
-         new System.String(' ', level * 2) + name + ": " + value
-    )
+    |> List.map dump
     |> Str.join "\n"
   if level = 0 then
     result
   else
     "\n" + result
-and dumpInlineMap values =
-  let items =
-    values
-    |> List.map (fun (name, value) -> (string name) + ": " + (dumpPrimitive value))
-    |> Str.join ", "
-  "{ " + items + " }"
-and dumpBlockList level values =
+
+type paren = { openParen: string; closeParen: string; }
+let makeParen o c = { openParen = o; closeParen = c; }
+
+let dumpInline dump paren values =
   let result =
     values
-    |> List.map (fun value ->
-         let value = dump (level + 1) value
-         new System.String(' ', level * 2) + "- " + value
-       )
-    |> Str.join "\n"
-  if level = 0 then
-    result
-  else
-    "\n" + result
-and dumpInlineList values =
-  let items =
-    values
-    |> List.map dumpPrimitive
+    |> List.map dump
     |> Str.join ", "
-  "[ " + items + " ]"
-and dumpMap level x =
+  paren.openParen + " "  + result + " " + paren.closeParen
+
+let rec dumpRecord level x =
+  let dumpBlockMap level =
+    let map (name, value) =
+      new String(' ', level * 2) + (string name) + ": " + (dump (level + 1) value)
+    dumpBlock map level
+  x
+  |> recordValues 
+  |> dumpBlockMap level 
+and dumpMap level x = 
+  let dumpBlockMap level =
+    let map (name, value) =
+      new String(' ', level * 2) + (string name) + ": " + (dump (level + 1) value)
+    dumpBlock map level
+  let dumpInlineMap level =
+    let map (name, value) = (string name) + ": " + (dump (level + 1) value)
+    dumpInline map (makeParen "{" "}")
+
+  let values = x |> normalizeMap |> Map.toList
   x.GetType().GetGenericArguments().[1]
   |> function
-     | PrimitiveType ->
-         x
-         |> normalizeMap
-         |> Map.toList
-         |> dumpInlineMap
+     | Patterns.PrimitiveType ->
+         values
+         |> dumpInlineMap level
      | _ ->
-         x
-         |> normalizeMap
-         |> Map.toList
+         values
          |> dumpBlockMap level
 and dumpList level x =
+  let dumpBlockList level =
+    let list value =
+      new String(' ', level * 2) + "- " + (dump (level + 1) value)
+    dumpBlock list level
+  let dumpInlineList level =
+    let list value = (dump (level + 1) value)
+    dumpInline list (makeParen "[" "]")
+
+  let values = x |> normalizeList
   x.GetType().GetGenericArguments().[0]
   |> function
      | PrimitiveType ->
-         x
-         |> normalizeList
-         |> dumpInlineList
+         values
+         |> dumpInlineList level
      | _ ->
-         x
-         |> normalizeList
+         values
          |> dumpBlockList level
 and dump level (x: obj) =
-  let t = x.GetType()
-  match t with
-  | PrimitiveType -> dumpPrimitive x
-  | RecordType _ -> x |> recordValues |> dumpBlockMap level 
-  | MapType _ -> dumpMap level x
-  | ListType _ -> dumpList level x
-  | _ -> failwith "未実装なんですけど"
-  
+  let dump' =
+    x.GetType()
+    |> function
+       | PrimitiveType -> dumpPrimitive
+       | RecordType _ -> dumpRecord
+       | MapType _ -> dumpMap
+       | ListType _ -> dumpList
+       | _ -> failwith "未実装なんですけど"
+  dump' level x
