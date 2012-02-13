@@ -66,6 +66,8 @@ let dumpInline dump paren values =
     |> Str.join ", "
   paren.openParen + " "  + result + " " + paren.closeParen
 
+let dumpNull _ _ = "null"
+
 let rec dumpRecord level x =
   let dumpBlockMap level =
     let map (name, value) =
@@ -110,13 +112,23 @@ and dumpList level x =
      | _ ->
          values
          |> dumpBlockList level
+and dumpOption level x =
+  x
+  |> normalizeOption
+  |> function
+     | Some x -> dump level x
+     | None -> "null"
+  
 and dump level (x: obj) =
   let dump' =
-    x.GetType()
-    |> function
-       | PrimitiveType -> dumpPrimitive
-       | RecordType _ -> dumpRecord
-       | MapType _ -> dumpMap
-       | ListType _ -> dumpList
-       | _ -> failwith "未実装なんですけど"
+    if x = null then
+      dumpNull
+    else
+      x.GetType()
+      |> function
+         | PrimitiveType -> dumpPrimitive
+         | RecordType _ -> dumpRecord
+         | MapType _ -> dumpMap
+         | ListType _ -> dumpList
+         | OptionType _ -> dumpOption
   dump' level x

@@ -115,6 +115,21 @@ let normalizeList (x: obj) : obj list =
 
   List.rev !result
 
+let normalizeOption (x: obj) : obj option =
+  let valueType = x.GetType().GetGenericArguments().[0]
+  let asm = typedefof<_ option>.Assembly
+  let optionModule = asm.GetType("Microsoft.FSharp.Core.OptionModule")
+  let isSome = optionModule.GetMethod("IsSome").MakeGenericMethod([| valueType |])
+  let get = optionModule.GetMethod("GetValue").MakeGenericMethod([| valueType |])
+  
+  if (isSome.Invoke(null, [| x |]) :?> bool) then
+    let obj = get.Invoke(null, [| x |])
+    printfn "!!%A" obj
+    Some obj
+  else
+    printfn "!!null!!!"
+    None
+
 /// ケース識別子と値のペアを、ty型の判別共用体に変換する
 let toUnion ty xs =
   match xs with

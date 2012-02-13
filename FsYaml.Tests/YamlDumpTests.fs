@@ -144,3 +144,20 @@ module ListDump =
                         "  name: b\n" +
                         "  value: 2")
     |> Verify
+
+[<TestFixture>]
+module OptionDump =
+  type t = { value: string option }
+  [<Scenario>]
+  let Someをdumpできる() =
+    Given { value = Some "hoge" }
+    |> When Yaml.dump
+    |> It should equal "value: hoge"
+    |> Verify
+
+  [<Scenario>]
+  let Noneの場合はnull() =
+    Given { value = None }
+    |> When Yaml.dump
+    |> It should equal "value: null"
+    |> Verify
