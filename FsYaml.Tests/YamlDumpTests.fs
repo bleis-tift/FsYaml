@@ -96,6 +96,15 @@ module RecordDump =
                         "  value: 90")
     |> Verify
 
+
+  type t3 = { name: string; values: int list }
+  [<Scenario>]
+  let 値にlistを持つrecordをdumpできる() =
+    Given { name = "aiueo"; values = [ 2; 3; ] }
+    |> When Yaml.dump
+    |> It should equal ("name: aiueo\n" +
+                        "values: [ 2, 3 ]")
+    |> Verify
 [<TestFixture>]
 module MapDump =
   [<Scenario>]
