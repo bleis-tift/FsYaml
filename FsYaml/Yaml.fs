@@ -6,6 +6,7 @@ open System.Text.RegularExpressions
 
 open Patterns
 open ReflectionUtils
+open YamlDump
 
 type Context = {
   PreIndent: int64
@@ -179,3 +180,5 @@ let load<'a> yamlStr: 'a =
   match yamlStr |> FParsec.CharParsers.runParserOnString parser (Context.make pspace_block) "" with
   | Success(res, _, _) -> unbox res
   | Failure(msg, err, state) -> failwithf "msg: %s\nerr: %A\nstate: %A" msg err state
+
+let dump x = YamlDump.dump 0 x

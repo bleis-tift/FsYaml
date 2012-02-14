@@ -1,18 +1,33 @@
 ﻿module Patterns
 
+open System
 open Microsoft.FSharp.Reflection
 
 type StrLitType = Quoted of string | Raw of string
 
-let (|PrimitiveType|OptionType|ListType|MapType|RecordType|) t =
+let (|PrimitiveType|OptionType|ListType|MapType|RecordType|UnionType|) t =
   let isPrimitive t =
     [ typeof<int>; typeof<float>; typeof<decimal>; typeof<string>; typeof<bool>; ]
     |> List.exists ((=)t)
+
+  let isUnion (t: Type) =
+    if FSharpType.IsUnion t then
+      if t.IsGenericType then
+        let gtd = t.GetGenericTypeDefinition()
+        [ typedefof<_ list>; typedefof<_ option>; ]
+        |> List.exists ((=)gtd)
+        |> not
+      else
+        true
+    else
+      false
 
   if isPrimitive t then
     PrimitiveType
   else if FSharpType.IsRecord t then
     RecordType t
+  else if isUnion t then
+    UnionType t
   else if t.GetGenericTypeDefinition() = typedefof<option<_>> then
     OptionType (t.GetGenericArguments().[0])
   else if t.GetGenericTypeDefinition() = typedefof<list<_>> then

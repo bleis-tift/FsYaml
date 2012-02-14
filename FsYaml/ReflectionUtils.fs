@@ -1,5 +1,7 @@
 ﻿module ReflectionUtils
 
+open System
+open System.Reflection
 open Microsoft.FSharp.Reflection
 open Patterns
 
@@ -67,6 +69,64 @@ let toMap keyType valType xs =
     |> List.map (makeTuple)
     |> specialize kvType
   mapType.GetConstructors().[0].Invoke([| xs |])
+
+let asm = typedefof<Map<_, _>>.Assembly
+
+let normalizeMap (x: obj): Map<IComparable, obj> =
+  let mapType k v = typedefof<Map<_, _>>.MakeGenericType([| k; v |])
+  let keyType = x.GetType().GetGenericArguments().[0]
+  let valueType = x.GetType().GetGenericArguments().[1]
+  let kvType = FSharpType.MakeTupleType([| keyType; valueType |])
+  let inType = mapType keyType valueType
+  let outType = mapType typedefof<IComparable> typedefof<obj>
+  
+  let mapModule = asm.GetType("Microsoft.FSharp.Collections.MapModule")
+  let toList = mapModule.GetMethod("ToList").MakeGenericMethod(keyType, valueType)
+  let listed = toList.Invoke(null, [| x |])
+
+  let listModule = asm.GetType("Microsoft.FSharp.Collections.ListModule")
+  let iter = listModule.GetMethod("Iterate").MakeGenericMethod(kvType)
+  let iterFunType = FSharpType.MakeFunctionType(kvType, typedefof<unit>)
+  let result = ref Map.empty
+  let iterFunImpl = fun x ->
+                      let values = FSharpValue.GetTupleFields(x)
+                      result := !result |> Map.add (values.[0] :?> IComparable) (values.[1])
+                      box ()
+  let iterFun = FSharpValue.MakeFunction(iterFunType, iterFunImpl)
+  iter.Invoke(null, [| iterFun; listed |]) |> ignore
+  
+  !result
+
+let normalizeList (x: obj) : obj list =
+  let listType v = typedefof<_ list>.MakeGenericType([| v |])
+  let valueType = x.GetType().GetGenericArguments().[0]
+  let inType = listType valueType
+  let outType = listType typedefof<obj>
+
+  let listModule = asm.GetType("Microsoft.FSharp.Collections.ListModule")
+  let iter = listModule.GetMethod("Iterate").MakeGenericMethod(valueType)
+  let iterFunType = FSharpType.MakeFunctionType(valueType, typedefof<unit>)
+  let result = ref []
+  let iterFunImpl = fun x ->
+                      result := (box x) :: !result
+                      box ()
+  let iterFun = FSharpValue.MakeFunction(iterFunType, iterFunImpl)
+  iter.Invoke(null, [| iterFun; x |]) |> ignore
+
+  List.rev !result
+
+let normalizeOption (x: obj) : obj option =
+  let valueType = x.GetType().GetGenericArguments().[0]
+  let asm = typedefof<_ option>.Assembly
+  let optionModule = asm.GetType("Microsoft.FSharp.Core.OptionModule")
+  let isSome = optionModule.GetMethod("IsSome").MakeGenericMethod([| valueType |])
+  let get = optionModule.GetMethod("GetValue").MakeGenericMethod([| valueType |])
+  
+  if (isSome.Invoke(null, [| x |]) :?> bool) then
+    let obj = get.Invoke(null, [| x |])
+    Some obj
+  else
+    None
 
 /// プロパティ名と値のペアのリストを、ty型のレコードに変換する
 let toRecord ty xs =

@@ -22,3 +22,7 @@ let replaceEscapeSequence str =
       let num = Convert.ToInt32((m.Groups.Item idx).Value, 16)
       Char.ConvertFromUtf32(num)
   )
+
+let lower str = (str: string).ToLower()
+
+let join sep (str: #obj seq) = System.String.Join(sep, Array.ofSeq str)
