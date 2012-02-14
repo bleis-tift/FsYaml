@@ -118,7 +118,14 @@ and dumpOption level x =
   |> function
      | Some x -> dump level x
      | None -> "null"
-  
+and dumpUnion level x =
+  let t = x.GetType();
+  let info, objs = FSharpValue.GetUnionFields(x, t)
+  info.Name + ": " +
+    match objs |> List.ofArray with
+    | [] -> ""
+    | x :: [] -> dump (level + 1) x
+    | _ -> failwith "2項以上はサポート外です。"
 and dump level (x: obj) =
   let dump' =
     if x = null then
@@ -131,4 +138,5 @@ and dump level (x: obj) =
          | MapType _ -> dumpMap
          | ListType _ -> dumpList
          | OptionType _ -> dumpOption
+         | UnionType _ -> dumpUnion
   dump' level x

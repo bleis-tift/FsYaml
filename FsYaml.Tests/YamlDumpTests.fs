@@ -170,3 +170,39 @@ module OptionDump =
     |> When Yaml.dump
     |> It should equal "value: null"
     |> Verify
+
+[<TestFixture>]
+module UnionDump =
+  type U =
+    | A
+    | B of string
+    | C of int list
+    | D of string * int
+
+  [<Scenario>]
+  let 項がない判別共用体をdumpできる() =
+    Given A
+    |> When Yaml.dump
+    |> It should equal "A: "
+    |> Verify
+
+  [<Scenario>]
+  let 項がstringの判別共用体をdumpできる() =
+    Given (B "aaa")
+    |> When Yaml.dump
+    |> It should equal "B: aaa"
+    |> Verify
+
+  [<Scenario>]
+  let 項がlistの判別共用体をdumpできる() =
+    Given (C [ 1; 2; 3; ])
+    |> When Yaml.dump
+    |> It should equal "C: [ 1, 2, 3 ]"
+    |> Verify
+
+  [<Scenario()>]
+  [<ExpectedException>]
+  let ``2項以上の場合は例外が発生する``() =
+    Given (D ("aiueo", 3))
+    |> When Yaml.dump
+    |> Verify
