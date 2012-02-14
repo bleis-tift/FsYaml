@@ -124,10 +124,8 @@ let normalizeOption (x: obj) : obj option =
   
   if (isSome.Invoke(null, [| x |]) :?> bool) then
     let obj = get.Invoke(null, [| x |])
-    printfn "!!%A" obj
     Some obj
   else
-    printfn "!!null!!!"
     None
 
 /// プロパティ名と値のペアのリストを、ty型のレコードに変換する
