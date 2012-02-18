@@ -1,0 +1,108 @@
+<html>
+    <head>
+        <meta http-equiv="content-type" content="text/html; charset=utf-8"/>
+        <title>FsYaml</title>
+        <link rel="stylesheet" href="style.css" type="text/css"/>
+    </head>
+    <body>
+        <div><h1>FsYaml</h1></div>
+        <p>F#用のYAMLライブラリです。</p>
+        <p>F#の型(レコードやリストなど)との親和性が高く、YAMLをF#で定義した型に直接マッピングできます。</p>
+        <h2>特徴</h2>
+        <p>
+        FsYamlは、設定ファイルを手軽に読み込むという目的に特化しています。
+        そのため、パフォーマンスなどは優先順位としては低くなっています。
+        また、フルスペックのYAMLが扱えるわけではなく、あくまで設定ファイルに有用そうなものから実装しています。
+        </p>
+        <h2>例</h2>
+        <h3>簡単な例</h3>
+        <p>例えば、以下のYAML文字列を考えます。</p>
+        <pre>
+Name: bleis-tift
+Languages: - 'F#'
+           - 'C#'
+           - Java
+           - Scala</pre>
+        <p>この文字列がstrという変数に入っているとして、それを読み込むために、例えば以下の型を定義します。</p>
+        <pre>type t = { Name: string; Languages: string list }</pre>
+        <p>そして、FsYamlを使用して以下のように読み込むことができます</p>
+        <pre>let x = Yaml.load&lt;t&gt; str</pre>
+        <p>たったこれだけで、xにはYAML文字列を読み込んだt型の値である、</p>
+        <pre>{ Name = "bleis-tift"; Languages = [ "F#"; "C#"; "Java"; "Scala" ] }</pre>
+        <p>が格納されます。</p>
+        <h2>対応している型</h2>
+        <p>以下の型の組み合わせに対応しています。</p>
+        <ul>
+            <li>
+            Scalar Types
+            <ul>
+                <li>bool</li>
+                <li>int</li>
+                <li>float</li>
+                <li>decimal</li>
+                <li>string</li>
+                <li>'a option</li>
+            </ul>
+            </li>
+            <li>
+            Collection Types
+            <ul>
+                <li>'a list</li>
+                <li>Map&lt;'a, 'b&gt;</li>
+            </ul>
+            </li>
+            <li>
+            Etc Types
+            <ul>
+                <li>レコード</li>
+                <li>判別共用体</li>
+            </ul>
+            </li>
+        </ul>
+        <p>
+        YAMLの!!nullの代わりに、'a optionに対応しています。
+        これにより、nullになりうる項目には'a optionを用います。
+        項目がnullの場合、Noneに、非nullの場合はその値がSomeに包まれた値になります。
+        </p>
+        <p>
+        レコードと判別共用体は、YAMLの!!mapの特別な形です。
+        !!mapをF#のMapにマッピングすることも可能ですが、キーが固定的なものとなる場合はレコードにマッピングした方が使いやすいでしょう。
+        </p>
+        <p>
+        !!mapを判別共用体にマッピングする場合、ケース識別子をキーに持つマップのマップとなる点に注意してください。
+        判別共用体へのマッピングは実験的な機能です。
+        </p>
+        <h2>配布ページ</h2>
+        <dl>
+            <dt>ソースコード</dt>
+            <dd><a href="https://github.com/bleis-tift/FsYaml/">github/bleis-tift/FsYaml</a></dd>
+        </dl>
+        <h2>フィードバック</h2>
+        <p>
+        フィードバックは義務ではなく権利です。
+        なので、絶対にフィードバックしろ、とは言いません。
+        もしフィードバックしていただけるのであれば、どのような手段でも構いません。
+        例えば、
+        </p>
+        <ul>
+            <li>Twitterで<a href="https://twitter.com/bleis">@bleis</a>にmentionを投げる</li>
+            <li><a href="https://github.com/bleis-tift/FsYaml/issues">GithubのIssues</a>にチケットを登録する</li>
+            <li>pull requestを投げる</li>
+            <li>勉強会等で捕まえて直接言う</li>
+        </ul>
+        <p>などなど、伝われば方法はなんだっていいです。が、対応するかどうかは分かりません。</p>
+        <h2>更新履歴</h2>
+        <dl>
+            <dt>1.0</dt><dd>公開</dd>
+        </dl>
+        <h2>ライセンス</h2>
+        <p>
+        <a href="http://www.kmonos.net/nysl/" title="煮るなり焼くなり好きにしろライセンス">NYSL</a>です。
+        自己責任のもとに自由に使い、改造、配布などなどを行ってください。
+        </p>
+        <hr/>
+        <address>
+            contact info: <a href="https://twitter.com/bleis">@bleis</a>
+        </address>
+    </body>
+</html>
