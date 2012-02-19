@@ -1,4 +1,4 @@
-﻿module YamlDumpTests
+﻿module YamlDumperTests
 
 open NUnit.Framework
 open NaturalSpec

@@ -1,4 +1,4 @@
-﻿module YamlDump
+﻿module YamlDumper
 
 open System
 open System.Text.RegularExpressions
