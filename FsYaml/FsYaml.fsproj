@@ -39,6 +39,7 @@
     <Compile Include="Str.fs" />
     <Compile Include="YamlParser.fs" />
     <Compile Include="YamlDumper.fs" />
+    <Compile Include="Yaml.fsi" />
     <Compile Include="Yaml.fs" />
     <None Include="packages.config" />
   </ItemGroup>
