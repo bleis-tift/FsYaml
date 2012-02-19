@@ -2,7 +2,6 @@
 
 open System
 open System.Text.RegularExpressions
-open System.Text
 
 open Microsoft.FSharp.Reflection
 
@@ -11,16 +10,14 @@ open ReflectionUtils
 
 let dumpString str =
   let pat = @"[\b\r\n\t""]"
-  if(Regex.IsMatch(str, pat)) then
-    let ret = new StringBuilder()
-    ret.Append(@"""").Append(Regex.Replace(str, @"""", @"\""")).Append(@"""") |> ignore
-    ret.ToString()
+  if Regex.IsMatch(str, pat) then
+    "\"" + Regex.Replace(str, "\"", @"\""") + "\""
   else
     str
 
 let dumpFloat f =
   let (|Infinity|NegativeInfinity|NaN|Float|)f =
-    if System.Double.IsNaN f then NaN
+    if Double.IsNaN f then NaN
     else if f = infinity then Infinity
     else if f = -infinity then NegativeInfinity
     else Float f
@@ -32,8 +29,7 @@ let dumpFloat f =
   | Float f -> string f
 
 let dumpPrimitive level (x: obj) =
-  let t = x.GetType()
-  match t with
+  match x.GetType() with
   | StrType -> dumpString (x :?> string)
   | IntType -> string x
   | FloatType -> dumpFloat (x :?> float)
@@ -56,15 +52,15 @@ let dumpBlock dump level values =
   else
     "\n" + result
 
-type paren = { openParen: string; closeParen: string; }
-let makeParen o c = { openParen = o; closeParen = c; }
+type Paren = { OpenParen: string; CloseParen: string; }
+let makeParen o c = { OpenParen = o; CloseParen = c; }
 
 let dumpInline dump paren values =
   let result =
     values
     |> List.map dump
     |> Str.join ", "
-  paren.openParen + " "  + result + " " + paren.closeParen
+  paren.OpenParen + " "  + result + " " + paren.CloseParen
 
 let dumpNull _ _ = "null"
 
@@ -122,9 +118,9 @@ and dumpUnion level x =
   let t = x.GetType();
   let info, objs = FSharpValue.GetUnionFields(x, t)
   info.Name + ": " +
-    match objs |> List.ofArray with
-    | [] -> ""
-    | x :: [] -> dump (level + 1) x
+    match objs with
+    | [||] -> ""
+    | [| x |] -> dump (level + 1) x
     | _ -> failwith "2項以上はサポート外です。"
 and dump level (x: obj) =
   let dump' =
