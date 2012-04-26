@@ -132,6 +132,21 @@ module レコードのデフォルト値 =
     |> It should equal { Name = "hoge piyo"; Age = 42 }
     |> Verify
 
+  type s = { Name: string; [<Attributes.AllowEmpty>] Age: int }
+  [<Scenario>]
+  let AllowEmptyが指定されたフィールドにデフォルト値が設定される() =
+    Given "{ Name: hoge piyo }"
+    |> When Yaml.load<s>
+    |> It should equal { Name = "hoge piyo"; Age = 0 }
+    |> Verify
+  
+  [<Scenario>]
+  let AllowEmptyが指定されたフィールドに値がある場合はそれが設定される() =
+    Given "{ Name: hoge piyo, Age: 30 }"
+    |> When Yaml.load<s>
+    |> It should equal { Name = "hoge piyo"; Age = 30 }
+    |> Verify
+
 module ``インラインのstring listを持つレコード`` =
   type t = { Name: string; Comunities: string list }
   [<Scenario>]

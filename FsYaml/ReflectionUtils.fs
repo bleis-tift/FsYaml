@@ -130,9 +130,30 @@ let toUnion ty xs =
       FSharpValue.MakeUnion(c, [| value |])
   | _ -> failwith "oops!"
 
+let defaultTypeValue = function
+| IntType -> box 0
+| FloatType -> box 0.0
+| DecimalType -> box 0.0M
+| StrType -> box ""
+| BoolType -> box false
+| Opt _ -> box None
+| OtherType t ->
+    match t with
+    | ListType _ -> box []
+    | MapType _ -> box Map.empty
+    | other -> failwithf "AllowEmpty attribute is not support %s." t.Name
+
 let defaultValue typ name =
   let prop = (typ: Type).GetProperty("Default" + name)
-  Raw (string <| prop.GetValue(null, null))
+  if prop = null then
+    let prop = typ.GetProperty(name)
+    let allowEmpty = prop.GetCustomAttributes(typeof<Attributes.AllowEmpty>, false)
+    if allowEmpty.Length = 0 then
+      failwithf "%s.%s does not have default value and AllowEmpty attribute." typ.Name name
+    else
+      Raw (prop.PropertyType |> defaultTypeValue |> string)
+  else
+    Raw (prop.GetValue(null, null) |> string)
 
 /// プロパティ名と値のペアのリストを、ty型のレコードに変換する
 let toRecord ty xs =
