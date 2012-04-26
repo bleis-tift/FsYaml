@@ -115,6 +115,23 @@ module 単純なレコード =
     |> It should equal { Name = Some "hoge piyo"; Age = Some 20 }
     |> Verify
 
+module レコードのデフォルト値 =
+  type t = { Name: string; Age: int } with
+    static member DefaultAge = -1
+  [<Scenario>]
+  let 存在しないフィールドにデフォルト値を設定できる() =
+    Given "{ Name: hoge piyo }"
+    |> When Yaml.load<t>
+    |> It should equal { Name = "hoge piyo"; Age = -1 }
+    |> Verify
+
+  [<Scenario>]
+  let 存在する場合はデフォルト値は無視される() =
+    Given "{ Name: hoge piyo, Age: 42 }"
+    |> When Yaml.load<t>
+    |> It should equal { Name = "hoge piyo"; Age = 42 }
+    |> Verify
+
 module ``インラインのstring listを持つレコード`` =
   type t = { Name: string; Comunities: string list }
   [<Scenario>]

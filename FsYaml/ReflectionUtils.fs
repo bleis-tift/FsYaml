@@ -130,12 +130,18 @@ let toUnion ty xs =
       FSharpValue.MakeUnion(c, [| value |])
   | _ -> failwith "oops!"
 
+let defaultValue typ name =
+  let prop = (typ: Type).GetProperty("Default" + name)
+  Raw (string <| prop.GetValue(null, null))
+
 /// プロパティ名と値のペアのリストを、ty型のレコードに変換する
 let toRecord ty xs =
   let conv xs (field: System.Reflection.PropertyInfo) =
     xs
-    |> List.find (fst >> ((=)field.Name))
-    |> (snd >> (convValue field.PropertyType))
+    |> List.tryFind (fst >> ((=)field.Name))
+    |> function
+       | Some (_, x) -> (convValue field.PropertyType x)
+       | _ -> convValue field.PropertyType (defaultValue ty field.Name)
   
   let args =
     ty |> FSharpType.GetRecordFields
