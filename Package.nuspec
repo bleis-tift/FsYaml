@@ -2,7 +2,7 @@
 <package >
   <metadata>
     <id>FsYaml</id>
-    <version>1.1.1</version>
+    <version>1.1.2</version>
     <authors>bleis-tift</authors>
     <owners>bleis-tift</owners>
     <licenseUrl>https://github.com/bleis-tift/FsYaml/blob/master/NYSL.txt</licenseUrl>
