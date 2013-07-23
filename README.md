@@ -27,13 +27,23 @@ F#の型との親和性が高く、YAMLを直接F#で定義した型にマッピ
 これを実現するために、FsYamlではYAMLの読み込み時に結果の型を指定します。
 例えば、ユーザ名とパスワードを保持するYAMLを読み込みたい場合、
 
-    type Config = { UserName: string; Password: string }
+```fsharp
+type Config = { UserName: string; Password: string }
+```
 
 と言う型を作り、
 
-    let config = Yaml.load<Config> str
+```fsharp
+let config = Yaml.load<Config> str
+```
 
 のように読み込みます。
+これだけで、以下のようなYAML文字列をパースできます。
+
+```yaml
+UserName: bleis-tift
+Password: aaa
+```
 
 設定ファイルの読み込みを一番の目的としているので、
 パフォーマンスは気にしていません。
