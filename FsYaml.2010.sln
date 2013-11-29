@@ -1,6 +1,6 @@
 ﻿
-Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 2012
+Microsoft Visual Studio Solution File, Format Version 11.00
+# Visual Studio 2010
 Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "FsYaml", "FsYaml\FsYaml.fsproj", "{7CE0BA06-3236-4499-A283-B7A60CC4500A}"
 EndProject
 Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "FsYaml.Tests", "FsYaml.Tests\FsYaml.Tests.fsproj", "{6A06E448-C679-49B4-B4EC-093DEC51C326}"
