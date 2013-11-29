@@ -1,21 +1,15 @@
 <?xml version="1.0"?>
 <package >
   <metadata>
-    <id>FsYaml</id>
-    <version>1.1.2</version>
+    <id>$id$</id>
+    <version>$version$</version>
     <authors>bleis-tift</authors>
     <owners>bleis-tift</owners>
     <licenseUrl>https://github.com/bleis-tift/FsYaml/blob/master/NYSL.txt</licenseUrl>
     <projectUrl>https://github.com/bleis-tift/FsYaml</projectUrl>
     <requireLicenseAcceptance>false</requireLicenseAcceptance>
     <summary>Typed Yaml Library for F#</summary>
-    <description>Type safe Yaml library for F#.</description>
+    <description>$description$</description>
     <tags>f# yaml library</tags>
-    <dependencies>
-      <dependency id="FParsec" version="0.9.1" />
-    </dependencies>
   </metadata>
-  <files>
-    <file src="bin\net4.0\*" target="lib\net40"/>
-  </files>
 </package>
