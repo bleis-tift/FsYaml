@@ -7,42 +7,70 @@ open FsYaml.Utility
 open FsYaml.IntermediateTypes
 open FsYaml.NativeTypes
 
-let scalarDefinition t f = {
-  Accept = ((=) t)
-  Construct = fun construct' t yaml ->
-    match yaml with
-    | Scalar (s, _) -> Scalar.value s |> f |> box
-    | _ -> loadingError yaml "%s must be scalar." (Type.print t)
-  Represent = fun _ -> raise (NotImplementedException())
-}
+let scalarConstruct f = fun construct' t yaml ->
+  match yaml with
+  | Scalar (s, _) -> Scalar.value s |> f |> box
+  | _ -> loadingError yaml "%s must be scalar." (Type.print t)
+let plainRepresnet f = fun represent t obj -> Scalar (Plain (f obj), None)
+let nonplainRepresent f = fun represent t obj -> Scalar (NonPlain (f obj), None)
 
-let nullableScalarDefinition t f = {
-  Accept = ((=) t)
-  Construct = fun construct' t yaml ->
-    match yaml with
-    | Scalar (s, _) -> Scalar.value s |> f |> box
-    | Null _ -> null
-    | _ -> loadingError yaml "%s must be scalar." (Type.print t)
-  Represent = fun _ -> raise (NotImplementedException())
-}
+let nullableScalarConstruct f = fun construct' t yaml ->
+  match yaml with
+  | Scalar (s, _) -> Scalar.value s |> f |> box
+  | Null _ -> null
+  | _ -> loadingError yaml "%s must be scalar." (Type.print t)
+let nullableNonPlainPresent f = fun represent t obj ->
+  match obj with
+  | null -> Null None
+  | _ -> Scalar (NonPlain (f obj), None)
 
 let isGenericType expected (x: Type) = x.IsGenericType && x.GetGenericTypeDefinition() = expected
 
-let intDef = scalarDefinition typeof<int> int
-let int64Def = scalarDefinition typeof<int64> int64
-let floatDef = scalarDefinition typeof<float> (String.toLower >> function
-  | ".inf" | "+.inf" -> Double.PositiveInfinity
-  | "-.inf" -> Double.NegativeInfinity
-  | ".nan" -> Double.NaN
-  | otherwise -> float otherwise)
-let stringDef = nullableScalarDefinition typeof<string> id
-let boolDef = scalarDefinition typeof<bool> (String.toLower >> function
-  | "y" | "yes" | "on" -> true
-  | "n" | "no"  | "off" -> false
-  | otherwise -> Boolean.Parse(otherwise))
-let decimalDef = scalarDefinition typeof<decimal> decimal
-let datetimeDef = scalarDefinition typeof<DateTime> (fun x -> DateTime.Parse(x))
-let timespanDef = scalarDefinition typeof<TimeSpan> (fun x -> TimeSpan.Parse(x))
+let intDef = { Accept = (=)typeof<int>; Construct = scalarConstruct int; Represent = plainRepresnet string }
+let int64Def = { Accept = (=)typeof<int64>; Construct = scalarConstruct int64; Represent = plainRepresnet string }
+let floatDef = {
+  Accept = (=)typeof<float>
+  Construct = scalarConstruct (String.toLower >> function
+    | ".inf" | "+.inf" -> Double.PositiveInfinity
+    | "-.inf" -> Double.NegativeInfinity
+    | ".nan" -> Double.NaN
+    | otherwise -> float otherwise)
+  Represent = fun represent t obj ->
+    let n = unbox<float> obj
+    let text =
+      if Double.IsNaN(n) then ".NaN"
+      elif Double.IsPositiveInfinity(n) then "+.inf"
+      elif Double.IsNegativeInfinity(n) then "-.inf"
+      else string n
+    Scalar (Plain text, None)
+}
+let stringDef = { Accept = (=)typeof<string>; Construct = nullableScalarConstruct id; Represent = nullableNonPlainPresent string }
+let boolDef = {
+  Accept = (=)typeof<bool>
+  Construct = scalarConstruct (String.toLower >> function
+    | "y" | "yes" | "on" -> true
+    | "n" | "no"  | "off" -> false
+    | otherwise -> Boolean.Parse(otherwise))
+  Represent = fun represent t obj ->
+    let text = unbox<bool> obj |> string |> String.toLower 
+    Scalar (Plain text, None)
+}
+let decimalDef = { Accept = (=)typeof<decimal>; Construct = scalarConstruct decimal; Represent = plainRepresnet string }
+let datetimeDef = {
+  Accept = (=)typeof<DateTime>
+  Construct = scalarConstruct (fun x -> DateTime.Parse(x))
+  Represent = nonplainRepresent (fun x ->
+    let d = unbox<DateTime> x
+    d.ToString("yyyy-MM-dd HH:mm:ss.fff"))
+}
+let timespanDef = {
+  Accept = (=)typeof<TimeSpan>
+  Construct = scalarConstruct (fun x -> TimeSpan.Parse(x))
+  Represent = nonplainRepresent (fun x ->
+    let t = unbox<TimeSpan> x
+    t.ToString(@"hh\:mm\:ss\.fff")
+  )
+}
 
 let recordDef = {
   Accept = (fun t -> FSharpType.IsRecord(t))
@@ -57,7 +85,16 @@ let recordDef = {
           | None -> loadingError yaml "%s.%s key was not found." (Type.print t) (p.Name))
       FSharpValue.MakeRecord(t, values)
     | _ -> loadingError yaml "%s must be mapping." (Type.print t)
-  Represent = fun _ -> raise (NotImplementedException())
+  Represent = fun represent t obj ->
+    let values =
+      FSharpType.GetRecordFields(t)
+      |> Seq.map (fun field ->
+        let name = Scalar (Plain field.Name, None)
+        let value = represent field.PropertyType (field.GetValue(obj))
+        (name, value)
+      )
+      |> Map.ofSeq
+    Mapping (values, None)
 }
 
 let tupleDef = {
@@ -72,7 +109,12 @@ let tupleDef = {
         FSharpValue.MakeTuple(tupleValues, t)
       | None -> loadingError yaml "%s must have %d elements." (Type.print t) (Array.length elementTypes)
     | _ -> loadingError yaml "%s must be sequence." (Type.print t)
-  Represent = fun _ -> raise (NotImplementedException())
+  Represent = fun represent t obj ->
+    let values =
+      Seq.zip (FSharpType.GetTupleElements(t)) (FSharpValue.GetTupleFields(obj))
+      |> Seq.map (fun (elemType, elemValue) -> represent elemType elemValue)
+      |> Seq.toList
+    Sequence (values, None)
 }
 
 let listDef = {
@@ -82,9 +124,12 @@ let listDef = {
     | Sequence (sequence, _) ->
       let elementType = t.GetGenericArguments().[0]
       let elements = sequence |> List.map (construct' elementType)
-      ObjectSeq.toList elementType elements
+      ObjectElementSeq.toList elementType elements
     | _ -> loadingError yaml "%s should be sequence." (Type.print t)
-  Represent = fun _ -> raise (NotImplementedException())
+  Represent = fun represent t obj ->
+    let elementType = BoxedSeq.elementType t
+    let values = BoxedSeq.map (represent elementType) t obj |> Seq.toList
+    Sequence (values, None)
 }
 
 let mapDef = {
@@ -100,9 +145,22 @@ let mapDef = {
           let value = construct' valueType valueYaml
           (key, value)
         )
-      ObjectSeq.toMap keyType valueType values
+      ObjectElementSeq.toMap keyType valueType values
     | _ -> loadingError yaml "%s should be mapping." (Type.print t)
-  Represent = fun _ -> raise (NotImplementedException())
+  Represent = fun represent t obj ->
+    let keyType, valueType = BoxedMap.elementTypes t
+    let values =
+      BoxedMap.toSeq t obj
+      |> Seq.map (fun (key, value) ->
+        let key =
+          match represent keyType key with
+          | Scalar _ as s -> s
+          | _ -> dumpingError "%s key must be scalar." (Type.print t)
+        let value = represent valueType value
+        (key, value)
+      )
+      |> Map.ofSeq
+    Mapping (values, None)
 }
 
 let arrayDef = {
@@ -112,9 +170,12 @@ let arrayDef = {
     | Sequence (sequence, _) ->
       let elementType = t.GetElementType()
       let values = Seq.map (construct' elementType) sequence
-      ObjectSeq.toArray elementType values
+      ObjectElementSeq.toArray elementType values
     | _ -> loadingError yaml "%s should be sequence." (Type.print t)
-  Represent = fun _ -> raise (NotImplementedException())
+  Represent = fun represent t obj ->
+    let elementType = BoxedSeq.elementType t
+    let values = BoxedSeq.map (represent elementType) t obj |> Seq.toList
+    Sequence (values, None)
 }
 
 let seqDef = {
@@ -124,12 +185,15 @@ let seqDef = {
     | Sequence (sequence, _) ->
       let elementType = t.GetGenericArguments().[0]
       let xs = Seq.map (construct' elementType) sequence
-      ObjectSeq.cast elementType xs
+      ObjectElementSeq.cast elementType xs
     | _ -> loadingError yaml "%s should be sequence." (Type.print t)
-  Represent = fun _ -> raise (NotImplementedException())
+  Represent = fun represent t obj ->
+    let elementType = BoxedSeq.elementType t
+    let values = BoxedSeq.map (represent elementType) t obj |> Seq.toList
+    Sequence (values, None)
 }
 
-module Union =
+module UnionConstructor =
   let makeUnion (union: UnionCaseInfo) values = FSharpValue.MakeUnion(union, Seq.toArray values)
 
   let noFieldCase yaml (union: UnionCaseInfo) =
@@ -194,13 +258,63 @@ module Union =
     | 1 -> oneFieldCase construct' yaml union
     | _ -> manyFieldsCase construct' yaml union
 
+module UnionRepresenter =
+  let caseName (union: UnionCaseInfo) = Scalar (Plain union.Name, None)
+
+  let oneField represent (union: UnionCaseInfo) (value: obj) =
+    let fields = union.GetFields()
+    let valueType = fields.[0].PropertyType
+    let value = represent valueType value
+    Mapping (Map.ofList [caseName union, value ], None)
+
+  let manyFields represent (union: UnionCaseInfo) (values: obj[]) =
+    let fields = union.GetFields()
+    let fieldValues =
+      let xs =
+        Seq.zip fields values
+        |> Seq.map (fun (field, value) -> represent field.PropertyType value)
+        |> Seq.toList
+      Sequence (xs, None)
+    Mapping (Map.ofList [ caseName union, fieldValues ], None)
+
+  let isNamedFieldCase (union: UnionCaseInfo) =
+    let fields = union.GetFields()
+    match fields.Length with
+    | 0 -> false
+    | 1 -> fields.[0].Name <> "Item"
+    | _ -> fields |> Array.mapi (fun i field -> (i + 1, field)) |> Array.forall (fun (n, field) -> field.Name <> sprintf "Item%d" n)
+
+  let namedField represent (union: UnionCaseInfo) (values: obj[]) =
+    let fields = union.GetFields()
+    let values =
+      Seq.zip fields values
+      |> Seq.map (fun (field, value) ->
+        let name = Scalar (Plain field.Name, None)
+        let value = represent field.PropertyType value
+        (name, value)
+      )
+      |> Map.ofSeq
+    let name = caseName union
+    let fieldMapping = Mapping (values, None)
+    Mapping (Map.ofList [ name, fieldMapping ], None)
+
+  let represent (represent: RecursiveRepresenter) (t: Type) (obj: obj) =
+    let union, values = FSharpValue.GetUnionFields(obj, t)
+    if isNamedFieldCase union then
+      namedField represent union values
+    else
+      match values.Length with
+      | 0 -> caseName union
+      | 1 -> oneField represent union values.[0]
+      | _ -> manyFields represent union values 
+
 let unionDef = {
   Accept = fun t -> FSharpType.IsUnion(t)
   Construct = fun construct' t yaml ->
-    match FSharpType.GetUnionCases(t) |> Seq.tryPick (Union.tryConstruct construct' yaml) with
+    match FSharpType.GetUnionCases(t) |> Seq.tryPick (UnionConstructor.tryConstruct construct' yaml) with
     | Some x -> x
     | None -> loadingError yaml "Any %s cases was not found." (Type.print t)
-  Represent = fun _ -> raise (NotImplementedException())
+  Represent = UnionRepresenter.represent
 }
 
 let optionDef = {
@@ -208,14 +322,20 @@ let optionDef = {
   Construct = fun construct' t yaml ->
     let noneCase, someCase = let xs = FSharpType.GetUnionCases(t) in (xs.[0], xs.[1])
     match yaml with
-    | Null _ -> (Union.makeUnion noneCase [])
+    | Null _ -> (UnionConstructor.makeUnion noneCase [])
     | _ ->
       try
         let parameterType = t.GetGenericArguments().[0]
         let value = construct' parameterType yaml
-        Union.makeUnion someCase [ value ]
+        UnionConstructor.makeUnion someCase [ value ]
       with _ ->  unionDef.Construct construct' t yaml 
-  Represent = fun _ -> raise (NotImplementedException())
+  Represent = fun represent t obj ->
+    match obj with
+    | null -> Null None
+    | _ ->
+      let caseInfo, values = FSharpValue.GetUnionFields(obj, t)
+      let valueType = caseInfo.GetFields().[0].PropertyType
+      represent valueType values.[0]
 }
 
 let defaultDefinitions = [ intDef; int64Def; floatDef; stringDef; boolDef; decimalDef; datetimeDef; timespanDef; recordDef; tupleDef; listDef; mapDef; arrayDef; seqDef; optionDef; unionDef ]

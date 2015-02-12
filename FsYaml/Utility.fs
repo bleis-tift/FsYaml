@@ -90,7 +90,9 @@ module Seq =
     else
       Some (Seq.zip xs ys)
 
-module ObjectSeq =
+let fsharpAsembly = typedefof<list<_>>.Assembly
+
+module ObjectElementSeq =
   open System
   open System.Linq
   open Microsoft.FSharp.Reflection
@@ -122,3 +124,38 @@ module ObjectSeq =
     let array = Array.CreateInstance(t, xs.Count())
     xs |> Seq.iteri (fun i x -> array.SetValue(x, i))
     box array
+
+module BoxedSeq =
+  open System
+  open Microsoft.FSharp.Reflection
+
+  let seqModule = fsharpAsembly.GetType("Microsoft.FSharp.Collections.SeqModule")
+
+  let elementType (t: Type) =
+    if t.IsArray then
+      t.GetElementType()
+    else
+      t.GetGenericArguments().[0]
+
+  let map (f: obj -> 'a) (t: Type) (xs: obj): 'a seq =
+    let elementType = elementType t
+    let mapping =
+      let mappingFunctionType = typedefof<_ -> _>.MakeGenericType([| elementType; typeof<'a> |])
+      FSharpValue.MakeFunction(mappingFunctionType, fun x -> f x :> obj)
+    let mapFunc = seqModule.GetMethod("Map").MakeGenericMethod(elementType, typeof<'a>)
+    mapFunc.Invoke(null, [| mapping; xs |]) :?> seq<'a>
+
+module BoxedMap =
+  open System
+  open Microsoft.FSharp.Reflection
+
+  let mapModule = fsharpAsembly.GetType("Microsoft.FSharp.Collections.MapModule")
+
+  let elementTypes (t: Type) = let ts = t.GetGenericArguments() in (ts.[0], ts.[1])
+
+  let toSeq (t: Type) (map: obj): (obj * obj) seq =
+    let keyType, valueType = elementTypes t
+    let toListFunc = mapModule.GetMethod("ToSeq").MakeGenericMethod(keyType, valueType)
+    let resultSeq = toListFunc.Invoke(null, [| map |])
+    let resultSeqType = resultSeq.GetType()
+    BoxedSeq.map (fun kv -> let elems = FSharpValue.GetTupleFields(kv) in (elems.[0], elems.[1])) resultSeqType resultSeq

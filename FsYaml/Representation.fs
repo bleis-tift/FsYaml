@@ -2,10 +2,12 @@
 
 open YamlDotNet.Core
 open YamlDotNet.RepresentationModel
+open YamlDotNet.Core.Events
 open System.IO
 open FsYaml.Utility
 open FsYaml.FsYamlException
 open FsYaml.IntermediateTypes
+open System.Collections.Generic
 
 let getPosition (mark: Mark) = Some { Line = mark.Line; Column = mark.Column }
 
@@ -55,3 +57,45 @@ let rec yamlDotNetToIntermediate (node: YamlNode) =
   | unsupported -> loadingError2 position "%s is not supported node." (unsupported.GetType().Name)
     
 let parse = parseYaml >> yamlDotNetToIntermediate
+
+let rec intermediateToYamlDotNet (yaml: YamlObject) =
+  match yaml with
+  | Scalar (Plain value, _) ->
+    let node = YamlScalarNode(value)
+    node.Style <- ScalarStyle.Plain
+    node :> YamlNode
+  | Scalar (NonPlain value, _) ->
+    let node = YamlScalarNode(value)
+    node.Style <- ScalarStyle.DoubleQuoted
+    node :> YamlNode
+  | Sequence (sequence, _) ->
+    let children = sequence |> List.map intermediateToYamlDotNet
+    let node = YamlSequenceNode(children)
+    node.Style <- SequenceStyle.Block
+    node :> YamlNode
+  | Mapping (mapping, _) ->
+    let node = YamlMappingNode()
+    node.Style <- MappingStyle.Block
+
+    let children =
+      mapping
+      |> Seq.iter (fun (KeyValue(k, v)) ->
+        let key = intermediateToYamlDotNet k
+        let value = intermediateToYamlDotNet v
+        node.Children.Add(key, value)
+      )
+    
+    node :> YamlNode
+  | Null _ ->
+    let node = YamlScalarNode("null")
+    node.Style <- ScalarStyle.Plain
+    node :> YamlNode
+
+let toYamlString (yaml: YamlNode) =
+  let stream = YamlStream(YamlDocument(yaml))
+  let writer = new StringWriter()
+  stream.Save(writer)
+  let str = writer.ToString()
+  str.Substring(0, str.Length - 5) // remove "...\r\n"
+
+let present = intermediateToYamlDotNet >> toYamlString

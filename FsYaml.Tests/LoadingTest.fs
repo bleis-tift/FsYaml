@@ -282,7 +282,7 @@ module LoadUnionTest =
   type OneNamedFieldCase = OneNamedFieldCase of x: int
 
   [<Test>]
-  let ``１つの名前付きフィールドのケース``() =
+  let ``1つの名前付きフィールドのケース``() =
     let yaml = "OneNamedFieldCase: { x: 1 }"
     let actual = Yaml.load<OneNamedFieldCase> yaml
     actual |> should equal (OneNamedFieldCase (x = 1))
@@ -306,6 +306,22 @@ module LoadUnionTest =
     let yaml = "ManyFieldsCase: { Item1: 1, Item2: a, Item3: b }"
     let actual = Yaml.load<ManyFieldsCase> yaml
     actual |> should equal (ManyFieldsCase (1, "a", "b"))
+
+  type HalfNamedFieldCase =
+    | HalfNamedFieldCaseA of x: int * int
+    | HalfNamedFieldCaseB of int * y: int
+
+  [<Test>]
+  let ``一つ目の要素のみ名前がついたケースを変換できる``() =
+    let yaml = "HalfNamedFieldCaseA: { x: 1, Item2: 2 }"
+    let actual = Yaml.load<HalfNamedFieldCase> yaml
+    actual |> should equal (HalfNamedFieldCaseA (1, 2))
+
+  [<Test>]
+  let ``ニつ目の要素のみ名前がついたケースを変換できる``() =
+    let yaml = "HalfNamedFieldCaseB: { Item1: 1, y: 2 }"
+    let actual = Yaml.load<HalfNamedFieldCase> yaml
+    actual |> should equal (HalfNamedFieldCaseB (1, 2))
 
   [<CompilationRepresentation(CompilationRepresentationFlags.UseNullAsTrueValue)>]
   type UseNullAsTrueValueCase = NullCase | ValueCase1 of int | ValueCase2 of string
@@ -366,5 +382,5 @@ module LoadCustomTypeTest =
   [<Test>]
   let ``ユーザが作成した型をloadできる``() =
     let yaml = "1"
-    let actual = Yaml.load2<CustomType> [ customConstructor ] yaml
+    let actual = Yaml.loadWith<CustomType> [ customConstructor ] yaml
     actual |> should equal (CustomType(1))
