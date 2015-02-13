@@ -2,7 +2,6 @@
 
 open Microsoft.FSharp.Reflection
 open System
-open FsYaml.FsYamlException
 open FsYaml.Utility
 open FsYaml.IntermediateTypes
 open FsYaml.NativeTypes
@@ -10,7 +9,7 @@ open FsYaml.NativeTypes
 let scalarConstruct f = fun construct' t yaml ->
   match yaml with
   | Scalar (s, _) -> Scalar.value s |> f |> box
-  | _ -> loadingError yaml "%s must be scalar." (Type.print t)
+  | otherwise -> raise (FsYamlException.WithYaml(yaml, Messages.mustBeScalar, Type.print t, YamlObject.nodeTypeName otherwise))
 let plainRepresnet f = fun represent t obj -> Scalar (Plain (f obj), None)
 let nonplainRepresent f = fun represent t obj -> Scalar (NonPlain (f obj), None)
 
@@ -18,7 +17,7 @@ let nullableScalarConstruct f = fun construct' t yaml ->
   match yaml with
   | Scalar (s, _) -> Scalar.value s |> f |> box
   | Null _ -> null
-  | _ -> loadingError yaml "%s must be scalar." (Type.print t)
+  | otherwise -> raise (FsYamlException.WithYaml(yaml, Messages.mustBeScalar, Type.print t, YamlObject.nodeTypeName otherwise))
 let nullableNonPlainPresent f = fun represent t obj ->
   match obj with
   | null -> Null None
@@ -79,12 +78,12 @@ let recordDef = {
     | Mapping (mapping, _) ->
       let values =
         FSharpType.GetRecordFields(t)
-        |> Array.map (fun p ->
-          match Mapping.tryFind p.Name mapping with
-          | Some valueObj -> construct' p.PropertyType valueObj
-          | None -> loadingError yaml "%s.%s key was not found." (Type.print t) (p.Name))
+        |> Array.map (fun field ->
+          match Mapping.tryFind field.Name mapping with
+          | Some valueObj -> construct' field.PropertyType valueObj
+          | None -> raise (FsYamlException.WithYaml(yaml, Messages.recordFieldNotFound, Record.printField field)))
       FSharpValue.MakeRecord(t, values)
-    | _ -> loadingError yaml "%s must be mapping." (Type.print t)
+    | otherwise -> raise (FsYamlException.WithYaml(yaml, Messages.mustBeMapping, Type.print t, YamlObject.nodeTypeName otherwise))
   Represent = fun represent t obj ->
     let values =
       FSharpType.GetRecordFields(t)
@@ -107,8 +106,8 @@ let tupleDef = {
       | Some xs ->
         let tupleValues = xs |> Seq.map (fun (elementType, node) -> construct' elementType node) |> Seq.toArray
         FSharpValue.MakeTuple(tupleValues, t)
-      | None -> loadingError yaml "%s must have %d elements." (Type.print t) (Array.length elementTypes)
-    | _ -> loadingError yaml "%s must be sequence." (Type.print t)
+      | None -> raise (FsYamlException.WithYaml(yaml, Messages.tupleElementNumber, Type.print t, Array.length elementTypes))
+    | otherwise -> raise (FsYamlException.WithYaml(yaml, Messages.mustBeSequence, Type.print t, YamlObject.nodeTypeName otherwise))
   Represent = fun represent t obj ->
     let values =
       Seq.zip (FSharpType.GetTupleElements(t)) (FSharpValue.GetTupleFields(obj))
@@ -125,7 +124,7 @@ let listDef = {
       let elementType = t.GetGenericArguments().[0]
       let elements = sequence |> List.map (construct' elementType)
       ObjectElementSeq.toList elementType elements
-    | _ -> loadingError yaml "%s should be sequence." (Type.print t)
+    | otherwise -> raise (FsYamlException.WithYaml(yaml, Messages.mustBeSequence, Type.print t, YamlObject.nodeTypeName otherwise))
   Represent = fun represent t obj ->
     let elementType = BoxedSeq.elementType t
     let values = BoxedSeq.map (represent elementType) t obj |> Seq.toList
@@ -146,7 +145,7 @@ let mapDef = {
           (key, value)
         )
       ObjectElementSeq.toMap keyType valueType values
-    | _ -> loadingError yaml "%s should be mapping." (Type.print t)
+    | otherwise -> raise (FsYamlException.WithYaml(yaml, Messages.mustBeMapping, Type.print t, YamlObject.nodeTypeName otherwise))
   Represent = fun represent t obj ->
     let keyType, valueType = BoxedMap.elementTypes t
     let values =
@@ -155,7 +154,7 @@ let mapDef = {
         let key =
           match represent keyType key with
           | Scalar _ as s -> s
-          | _ -> dumpingError "%s key must be scalar." (Type.print t)
+          | otherwise -> raise (FsYamlException.Create(Messages.mapKeyMustBeScalar, Type.print t, YamlObject.nodeTypeName otherwise))
         let value = represent valueType value
         (key, value)
       )
@@ -171,7 +170,7 @@ let arrayDef = {
       let elementType = t.GetElementType()
       let values = Seq.map (construct' elementType) sequence
       ObjectElementSeq.toArray elementType values
-    | _ -> loadingError yaml "%s should be sequence." (Type.print t)
+    | otherwise -> raise (FsYamlException.WithYaml(yaml, Messages.mustBeSequence, Type.print t, YamlObject.nodeTypeName otherwise))
   Represent = fun represent t obj ->
     let elementType = BoxedSeq.elementType t
     let values = BoxedSeq.map (represent elementType) t obj |> Seq.toList
@@ -186,7 +185,7 @@ let seqDef = {
       let elementType = t.GetGenericArguments().[0]
       let xs = Seq.map (construct' elementType) sequence
       ObjectElementSeq.cast elementType xs
-    | _ -> loadingError yaml "%s should be sequence." (Type.print t)
+    | otherwise -> raise (FsYamlException.WithYaml(yaml, Messages.mustBeSequence, Type.print t, YamlObject.nodeTypeName otherwise))
   Represent = fun represent t obj ->
     let elementType = BoxedSeq.elementType t
     let values = BoxedSeq.map (represent elementType) t obj |> Seq.toList
@@ -222,7 +221,7 @@ module UnionConstructor =
     let fieldValues =
       match Seq.tryZip fieldTypes yamls with
       | Some xs -> xs |> Seq.map (fun (t, yaml) -> construct' t.PropertyType yaml) |> Seq.toArray
-      | None -> loadingError parentYamlForExceptionMessage "%s.%s case must have %d elements." union.DeclaringType.Name union.Name fieldTypes.Length
+      | None -> raise (FsYamlException.WithYaml(parentYamlForExceptionMessage, Messages.unionCaseElementNumber, (Union.printCase union), fieldTypes.Length))
     makeUnion union fieldValues
 
   let oneFieldCase construct' yaml (union: UnionCaseInfo) =
@@ -313,7 +312,7 @@ let unionDef = {
   Construct = fun construct' t yaml ->
     match FSharpType.GetUnionCases(t) |> Seq.tryPick (UnionConstructor.tryConstruct construct' yaml) with
     | Some x -> x
-    | None -> loadingError yaml "Any %s cases was not found." (Type.print t)
+    | None -> raise (FsYamlException.WithYaml(yaml, Messages.unionCaseNotFound, Type.print t))
   Represent = UnionRepresenter.represent
 }
 

@@ -1,5 +1,7 @@
 ﻿namespace FsYaml
 
+open System
+
 module IntermediateTypes =
   type Scalar =
     | Plain of string
@@ -25,11 +27,15 @@ module IntermediateTypes =
 
   [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
   module YamlObject =
+    open Microsoft.FSharp.Reflection
+
     let position = function
       | Scalar (_, p) -> p
       | Sequence (_, p) -> p
       | Mapping (_, p) -> p
       | Null p -> p
+
+    let nodeTypeName (x: YamlObject) = let caseInfo, _ = FSharpValue.GetUnionFields(x, typeof<YamlObject>) in caseInfo.Name
 
   [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
   module Mapping =

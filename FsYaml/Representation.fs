@@ -5,7 +5,6 @@ open YamlDotNet.RepresentationModel
 open YamlDotNet.Core.Events
 open System.IO
 open FsYaml.Utility
-open FsYaml.FsYamlException
 open FsYaml.IntermediateTypes
 open System.Collections.Generic
 
@@ -21,8 +20,8 @@ let parseYaml str =
   with
     | :? YamlException as ex ->
       let position = getPosition ex.Start
-      loadingError3 ex position "%s" "Error in parsing yaml."
-    | ex -> loadingError3 ex None "%s" "Error in parsing yaml."
+      raise (FsYamlException.WithPosition(ex, position, Messages.failedParsing))
+    | ex -> raise (FsYamlException.WithPosition(ex, None, Messages.failedParsing))
 
 let rec yamlDotNetToIntermediate (node: YamlNode) =
   let position = getPosition node.Start
@@ -34,7 +33,7 @@ let rec yamlDotNetToIntermediate (node: YamlNode) =
       match String.toLower scalarNode.Value with
       | "" | "null" | "~" -> Null position
       | _ -> Scalar (Plain scalarNode.Value, position)
-    | unsupported -> loadingError2 position "%A is not supported scalar type." unsupported
+    | notSupported -> raise (FsYamlException.WithPosition(position, Messages.notSupportedScalarType, sprintf "%A" notSupported))
   | :? YamlSequenceNode as seqNode ->
     let children =
       seqNode.Children
@@ -48,13 +47,13 @@ let rec yamlDotNetToIntermediate (node: YamlNode) =
         let key =
           match yamlDotNetToIntermediate key with
           | Scalar _ as key -> key
-          | _ -> loadingError2 position "The mapping key should be scalar."
+          | _ -> raise (FsYamlException.WithPosition(position, Messages.allowedOnlyScalar))
         let value = yamlDotNetToIntermediate value
         (key, value)
       )
       |> Map.ofSeq
     Mapping(mapping, position)
-  | unsupported -> loadingError2 position "%s is not supported node." (unsupported.GetType().Name)
+  | notSupported -> raise (FsYamlException.WithPosition(position, Messages.notSupportedNode, Type.print (notSupported.GetType())))
     
 let parse = parseYaml >> yamlDotNetToIntermediate
 
@@ -74,17 +73,15 @@ let rec intermediateToYamlDotNet (yaml: YamlObject) =
     node.Style <- SequenceStyle.Block
     node :> YamlNode
   | Mapping (mapping, _) ->
-    let node = YamlMappingNode()
-    node.Style <- MappingStyle.Block
-
     let children =
       mapping
-      |> Seq.iter (fun (KeyValue(k, v)) ->
+      |> Seq.map (fun (KeyValue(k, v)) ->
         let key = intermediateToYamlDotNet k
         let value = intermediateToYamlDotNet v
-        node.Children.Add(key, value)
+        KeyValuePair(key, value)
       )
-    
+    let node = YamlMappingNode(children)
+    node.Style <- MappingStyle.Block
     node :> YamlNode
   | Null _ ->
     let node = YamlScalarNode("null")

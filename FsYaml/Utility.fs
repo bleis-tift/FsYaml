@@ -1,6 +1,6 @@
 ﻿module internal FsYaml.Utility
 
-module internal String =
+module String =
   open System
 
   let toLower (x: string) = x.ToLower()
@@ -82,6 +82,16 @@ module Type =
   and internal printArray (t: Type) =
     let elem = t.GetElementType()
     sprintf "%s[]" (print elem)
+
+module Record =
+  open System.Reflection
+
+  let printField (x: PropertyInfo) = sprintf "%s.%s" (Type.print x.DeclaringType) x.Name
+
+module Union =
+  open Microsoft.FSharp.Reflection
+
+  let printCase (x: UnionCaseInfo) = sprintf "%s.%s" (Type.print x.DeclaringType) x.Name
 
 module Seq =
   let tryZip xs ys =

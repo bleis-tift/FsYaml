@@ -23,6 +23,30 @@ module TypeTest =
   let ``print`` t (expected: string) = Type.print t |> should equal expected
   
 [<TestFixture>]
+module RecordTest =
+  open Microsoft.FSharp.Reflection
+
+  type TestRecord = { Field: int }
+
+  [<Test>]
+  let ``{Type}.{Field}の形式でprintされる``() =
+    let field = FSharpType.GetRecordFields(typeof<TestRecord>).[0]
+    let actual = Record.printField field
+    actual |> should equal "TestRecord.Field"
+
+[<TestFixture>]
+module UnionTest =
+  open Microsoft.FSharp.Reflection
+
+  type TestUnion = Case
+
+  [<Test>]
+  let ``{Type}.{Case}の形式でprintされる``() =
+    let union = FSharpType.GetUnionCases(typeof<TestUnion>).[0]
+    let actual = Union.printCase union
+    actual |> should equal "TestUnion.Case"
+
+[<TestFixture>]
 module ObjectElementSeq =
   [<Test>]
   let ``obj seqをint seqにキャストできる``() =
