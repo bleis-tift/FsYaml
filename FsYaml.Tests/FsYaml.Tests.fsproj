@@ -61,6 +61,7 @@
     <Content Include="packages.config" />
     <Content Include="app.config" />
     <Compile Include="UtilityTest.fs" />
+    <Compile Include="TypesTest.fs" />
     <Compile Include="LoadingTest.fs" />
     <Compile Include="DumpingTest.fs" />
     <Compile Include="YamlTest.fs" />

@@ -1,11 +1,11 @@
-﻿module FsYaml.Representation
+﻿module internal FsYaml.Representation
 
 open YamlDotNet.Core
 open YamlDotNet.RepresentationModel
 open YamlDotNet.Core.Events
 open System.IO
 open FsYaml.Utility
-open FsYaml.IntermediateTypes
+open FsYaml.RepresentationTypes
 open System.Collections.Generic
 
 let getPosition (mark: Mark) = Some { Line = mark.Line; Column = mark.Column }

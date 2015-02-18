@@ -65,6 +65,7 @@
     <Compile Include="Utility.fs" />
     <Compile Include="Types.fs" />
     <Compile Include="Exception.fs" />
+    <Compile Include="CustomTypeDefinition.fs" />
     <Compile Include="TypeDefinitions.fs" />
     <Compile Include="Representation.fs" />
     <Compile Include="Native.fs" />

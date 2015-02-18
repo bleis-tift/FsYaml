@@ -4,7 +4,7 @@ open NUnit.Framework
 open FsUnit
 
 open FsYaml
-open FsYaml.IntermediateTypes
+open FsYaml.RepresentationTypes
 
 let represent<'a> value = Native.represent<'a> TypeDefinitions.defaultDefinitions value
 
