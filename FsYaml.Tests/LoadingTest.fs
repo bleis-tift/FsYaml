@@ -1,7 +1,8 @@
 ﻿module LoadingTest
 
-open NUnit.Framework
-open FsUnit
+open Persimmon
+open UseTestNameByReflection
+open Assertions
 
 open FsYaml
 open FsYaml.RepresentationTypes
@@ -18,340 +19,390 @@ let rec clearPosition = function
 
 let parse = FsYaml.Representation.parse >> clearPosition
 
-[<TestFixture>]
 module RepresentationTest =
-  [<TestCase("abc")>]
-  [<TestCase("1")>]
-  [<TestCase("3:4")>]
-  [<TestCase("3-4")>]
-  let Plainをパースできる input =
-    let actual = parse input
-    actual |> should equal (Scalar (Plain input, None))
+  let Plainをパースできる =
+    let body input = test {
+      let actual = parse input
+      do! actual |> should equal (Scalar (Plain input, None))
+    }
+    parameterize {
+      case ("abc")
+      case ("1")
+      case ("3:4")
+      case ("3-4")
+      run body
+    }
+    
+  let NonPlainをパースできる =
+    let body (input, expected) = test {
+      let actual = parse input
+      do! actual |> should equal (Scalar (NonPlain expected, None))
+    }
+    parameterize {
+      case ("\"abc\"", "abc")
+      case ("'abc'", "abc")
+      run body
+    }
 
-  [<TestCase("\"abc\"", "abc")>]
-  [<TestCase("'abc'", "abc")>]
-  let NonPlainをパースできる input expected =
-    let actual = parse input
-    actual |> should equal (Scalar (NonPlain expected, None))
-
-
-  [<TestCase("""[ abc, def, "ghi" ]""")>]
-  [<TestCase("""
+  let Sequenceをパースできる =
+    let body input = test {
+      let actual = parse input
+      let expected = Sequence ([ Scalar (Plain "abc", None); Scalar (Plain "def", None); Scalar (NonPlain "ghi", None) ], None)
+      do! actual |> should equal expected
+    }
+    parameterize {
+      case """[ abc, def, "ghi" ]"""
+      case """
 - abc
 - def
 - "ghi"
-""")>]
-  let Sequenceをパースできる input =
-    let actual = parse input
-    let expected = Sequence ([ Scalar (Plain "abc", None); Scalar (Plain "def", None); Scalar (NonPlain "ghi", None) ], None)
-    actual |> should equal expected
-
-  [<TestCase("""{ abc: def, ghi: [ jkf ] }""")>]
-  [<TestCase("""
+"""
+      run body
+    }
+    
+  let Mappingをパースできる =
+    let body input = test {
+      let actual = parse input
+      let expected =
+        let mapping = Map.ofList [ Scalar (Plain "abc", None), Scalar (Plain "def", None);
+                                   Scalar (Plain "ghi", None), Sequence ([ Scalar (Plain "jkf", None) ], None) ]
+        Mapping (mapping, None)
+      do! actual |> should equal expected
+    }
+    parameterize {
+      case """{ abc: def, ghi: [ jkf ] }"""
+      case """
 abc: def
 ghi:
      - jkf
-""")>]
-  let Mappingをパースできる input =
-    let actual = parse input
-    let expected =
-      let mapping = Map.ofList [ Scalar (Plain "abc", None), Scalar (Plain "def", None);
-                                 Scalar (Plain "ghi", None), Sequence ([ Scalar (Plain "jkf", None) ], None) ]
-      Mapping (mapping, None)
-    actual |> should equal expected
-
-  [<TestCase("abc: ")>]
-  [<TestCase("abc: null")>]
-  [<TestCase("abc: ~")>]
-  let Nullをパースできる input =
-    let actual = parse input
-    let expected = Mapping (Map.ofList [ Scalar (Plain "abc", None), Null None ], None)
-    actual |> should equal expected
-
-[<TestFixture>]
+"""
+      run body
+    }
+    
+  let Nullをパースできる =
+    let body input = test {
+      let actual = parse input
+      let expected = Mapping (Map.ofList [ Scalar (Plain "abc", None), Null None ], None)
+      do! actual |> should equal expected
+    }
+    parameterize {
+      case "abc: "
+      case "abc: null"
+      case "abc: ~"
+      run body
+    }
+    
 module LoadTest =
   open System
 
   type UnknownType() = class end
 
-  [<Test>]
-  [<ExpectedException(typeof<FsYamlException>)>]
-  let 登録されていない型は例外() =
+  let 登録されていない型は例外 = test {
     let yaml = "1"
-    Yaml.load<UnknownType> yaml |> ignore
+    let! e = trap { it (Yaml.load<UnknownType> yaml) }
+    do! e.GetType() |> should equal typeof<FsYamlException>
+  }
 
-  [<TestCase("1")>]
-  let intに変換できる yaml =
+  let intに変換できる = test {
+    let yaml = "1"
     let actual = Yaml.load<int> yaml
-    actual |> should equal (int yaml)
+    do! actual |> should equal (int yaml)
+  }
 
-  [<Test>]
-  [<ExpectedException>]
-  let 変換できない場合は例外() =
+  let 変換できない場合は例外 = test {
     let yaml = "not int"
-    Yaml.load<int> yaml |> ignore
+    let! e = trap { it (Yaml.load<int> yaml) }
+    do! e.GetType() |> should equal typeof<FsYamlException>
+  }
 
-  [<TestCase("234")>]
-  let int64に変換できる yaml =
+  let int64に変換できる = test {
+    let yaml = "234"
     let actual = Yaml.load<int64> yaml
-    actual |> should equal (int64 yaml)
+    do! actual |> should equal (int64 yaml)
+  }
 
-  [<TestCase("234.5", 234.5)>]
-  [<TestCase(".inf", Double.PositiveInfinity)>]
-  [<TestCase("+.inf", Double.PositiveInfinity)>]
-  [<TestCase("-.inf", Double.NegativeInfinity)>]
-  [<TestCase(".nan", Double.NaN)>]
-  let floatに変換できる yaml (expected: float)=
-    let actual = Yaml.load<float> yaml
-    actual |> should equal (expected)
+  let floatに変換できる =
+    let body (yaml, expected) = test {
+      let actual = Yaml.load<float> yaml
+      do! actual |> should equalFloat expected
+    }
+    parameterize {
+      case ("234.5", 234.5)
+      case (".inf", Double.PositiveInfinity)
+      case ("+.inf", Double.PositiveInfinity)
+      case ("-.inf", Double.NegativeInfinity)
+      case (".nan", Double.NaN)
+      run body
+    }
 
-  [<TestCase("aaaaa", "aaaaa")>]
-  [<TestCase("''", "")>]
-  [<TestCase("~", null)>]
-  [<TestCase("null", null)>]
-  [<TestCase("'null'", "null")>]
-  let stringに変換できる yaml (expected: string) =
-    let actual = Yaml.load<string> yaml
-    actual |> should equal expected
+  let stringに変換できる =
+    let body (yaml, expected) = test {
+      let actual = Yaml.load<string> yaml
+      do! actual |> should equal expected
+    }
+    parameterize {
+      case ("aaaaa", "aaaaa")
+      case ("''", "")
+      case ("~", null)
+      case ("null", null)
+      case ("'null'", "null")
+      run body
+    }
 
-  [<TestCase("true", true)>]
-  [<TestCase("yes", true)>]
-  [<TestCase("y", true)>]
-  [<TestCase("on", true)>]
-  [<TestCase("FALSE", false)>]
-  [<TestCase("NO", false)>]
-  [<TestCase("N", false)>]
-  [<TestCase("OFF", false)>]
-  let boolに変換できる yaml (expected: bool) =
-    let actual = Yaml.load<bool> yaml
-    actual |> should equal expected
+  let boolに変換できる =
+    let body (yaml, expected) = test {
+      let actual = Yaml.load<bool> yaml
+      do! actual |> should equal expected
+    }
+    parameterize {
+      case ("true", true)
+      case ("yes", true)
+      case ("y", true)
+      case ("on", true)
+      case ("FALSE", false)
+      case ("NO", false)
+      case ("N", false)
+      case ("OFF", false)
+      run body
+    }
 
-  [<TestCase("100.5")>]
-  let decimalに変換できる yaml =
+  let decimalに変換できる = test {
+    let yaml = "100.5"
     let actual = Yaml.load<decimal> yaml
-    actual |> should equal (decimal yaml)
+    do! actual |> should equal (decimal yaml)
+  }
 
-  [<TestCase("2015-2-5 22:00:01.222")>]
-  let DateTimeに変換できる yaml =
+  let DateTimeに変換できる = test {
+    let yaml =" 2015-2-5 22:00:01.222"
     let actual = Yaml.load<DateTime> yaml
-    actual |> should equal (DateTime.Parse(yaml))
+    do! actual |> should equal (DateTime.Parse(yaml))
+  }
 
-  [<TestCase("01:22:33.444")>]
-  let TimeSpanに変換できる yaml =
+  let TimeSpanに変換できる = test {
+    let yaml = "01:22:33.444"
     let actual = Yaml.load<TimeSpan> yaml
-    actual |> should equal (TimeSpan.Parse(yaml))
+    do! actual |> should equal (TimeSpan.Parse(yaml))
+  }
 
   type TestRecord = { A: int; B: string }
 
-  [<Test>]
-  let recordに変換できる() =
+  let recordに変換できる = test {
     let yaml = "{ A: 123, B: abc }"
     let actual = Yaml.load<TestRecord> yaml
-    actual |> should equal { A = 123; B = "abc" }
+    do! actual |> should equal { A = 123; B = "abc" }
+  }
 
-  [<Test>]
-  [<ExpectedException(typeof<FsYamlException>)>]
-  let recordの項目が足りない場合は失敗する() =
+  let recordの項目が足りない場合は失敗する = test {
     let yaml = "{ A: 123 }"
-    Yaml.load<TestRecord> yaml |> ignore
+    let! e = trap { it (Yaml.load<TestRecord> yaml) }
+    do! e.GetType() |> should equal typeof<FsYamlException>
+  }
 
-  [<Test>]
-  let tupleに変換できる() =
+  let tupleに変換できる = test {
     let yaml = "[ 1, 2, 3, abc ]"
     let actual = Yaml.load<int * int * string * string> yaml
-    actual |> should equal (1, 2, "3", "abc")
+    do! actual |> should equal (1, 2, "3", "abc")
+  }
 
-  [<Test>]
-  [<ExpectedException(typeof<FsYamlException>)>]
-  let tupleの要素が不足している場合は失敗する () =
+  let tupleの要素が不足している場合は失敗する = test {
     let yaml = "[ 1, 2, 3 ]"
-    Yaml.load<int * int * int * int> yaml |> ignore
+    let! e = trap { it (Yaml.load<int * int * int * int> yaml) }
+    do! e.GetType() |> should equal typeof<FsYamlException>
+  }
 
-  [<Test>]
-  [<ExpectedException(typeof<FsYamlException>)>]
-  let tupleの要素が多い場合は失敗する () =
+  let tupleの要素が多い場合は失敗する = test {
     let yaml = "[ 1, 2, 3, 4, 5 ]"
-    Yaml.load<int * int * int * int> yaml |> ignore
+    let! e = trap { it (Yaml.load<int * int * int * int> yaml) }
+    do! e.GetType() |> should equal typeof<FsYamlException>
+  }
 
-  [<Test>]
-  let listに変換できる() =
+  let listに変換できる = test {
     let yaml = "[ a, b, c, d, e ]"
     let actual = Yaml.load<string list> yaml
-    actual |> should equal [ "a"; "b"; "c"; "d"; "e" ]
+    do! actual |> should equal [ "a"; "b"; "c"; "d"; "e" ]
+  }
 
-  [<Test>]
-  let 空のリストに変換できる() =
+  let 空のリストに変換できる = test {
     let yaml = "[]"
     let actual = Yaml.load<string list> yaml
-    actual |> should equal ([]: string list)
+    do! actual |> should equal ([]: string list)
+  }
 
-  [<Test>]
-  let mapに変換できる() =
+  let mapに変換できる = test {
     let yaml = "{ a: 1, b: 2 }"
     let actual = Yaml.load<Map<string, int>> yaml
-    actual |> should equal (Map.ofList [ ("a", 1); ("b", 2) ])
+    do! actual |> should equal (Map.ofList [ ("a", 1); ("b", 2) ])
+  }
 
-  [<Test>]
-  let 空のmapに変換できる() =
+  let 空のmapに変換できる = test {
     let yaml = "{}"
     let actual = Yaml.load<Map<string, int>> yaml
-    actual |> should equal (Map.empty<string, int>)
+    do! actual |> should equal (Map.empty<string, int>)
+  }
 
-  [<Test>]
-  let arrayに変換できる() =
+  let arrayに変換できる = test {
     let yaml = "[ 1, 2, 3 ]"
     let actual = Yaml.load<int[]> yaml
-    actual |> should equal ([| 1; 2; 3 |])
+    do! actual |> should equal ([| 1; 2; 3 |])
+  }
 
-  [<Test>]
-  let 空のarrayに変換できる() =
+  let 空のarrayに変換できる = test {
     let yaml = "[]"
     let actual = Yaml.load<int[]> yaml
-    actual |> should equal (Array.empty<int>)
+    do! actual |> should equal (Array.empty<int>)
+  }
 
-  [<Test>]
-  let seqに変換できる() =
+  let seqに変換できる = test {
     let yaml = "[ 1, 2, 3 ]"
     let actual = Yaml.load<seq<int>> yaml
-    actual |> should equal (seq { 1..3 })
+    do! actual |> should equalSeq (seq { 1..3 })
+  }
 
-  [<Test>]
-  let 空のseqに変換できる() =
+  let 空のseqに変換できる = test {
     let yaml = "[]"
     let actual = Yaml.load<seq<int>> yaml
-    actual |> should equal (Seq.empty<int>)
+    do! actual |> should equalSeq (Seq.empty<int>)
+  }
 
-[<TestFixture>]
 module LoadUnionTest =
   type OneCase = OneCase
 
-  [<Test>]
-  let ``ケース1つ、フィールドなし``() =
+  let ``ケース1つ、フィールドなし`` = test {
     let yaml = "OneCase"
     let actual = Yaml.load<OneCase> yaml
-    actual |> should equal OneCase
+    do! actual |> should equal OneCase
+  }
 
   type TwoCase = TwoCase_1 | TwoCase_2
 
-  [<Test>]
-  let ``ケース2つ、フィールドなし``() =
+  let ``ケース2つ、フィールドなし`` = test {
     let yaml = "TwoCase_2"
     let actual = Yaml.load<TwoCase> yaml
-    actual |> should equal TwoCase_2
+    do! actual |> should equal TwoCase_2
+  }
 
   type OneFieldCase = OneFieldCase of int
 
-  [<Test>]
-  let ``フィールド1つ``() =
+  let ``フィールド1つ`` = test {
     let yaml = "OneFieldCase: 1"
     let actual = Yaml.load<OneFieldCase> yaml
-    actual |> should equal (OneFieldCase 1)
+    do! actual |> should equal (OneFieldCase 1)
+  }
 
   type TupleFieldCase = TupleFieldCase of (int * string)
 
-  [<Test>]
-  let ``フィールドがタプル``() =
+  let ``フィールドがタプル`` = test {
     let yaml = "TupleFieldCase: [ 1, a ]"
     let actual = Yaml.load<TupleFieldCase> yaml
-    actual |> should equal (TupleFieldCase (1, "a"))
+    do! actual |> should equal (TupleFieldCase (1, "a"))
+  }
 
   type ListFieldCase = ListFieldCase of int list
 
-  [<Test>]
-  let ``フィールドがリスト``() =
+  let ``フィールドがリスト`` = test {
     let yaml = "ListFieldCase: [ 1, 2, 3 ]"
     let actual = Yaml.load<ListFieldCase> yaml
-    actual |> should equal (ListFieldCase [ 1; 2; 3 ])
+    do! actual |> should equal (ListFieldCase [ 1; 2; 3 ])
+  }
 
   type MapFieldCase = MapFieldCase of Map<string, int>
 
-  [<Test>]
-  let ``フィールドがMap``() =
+  let ``フィールドがMap`` = test {
     let yaml = "MapFieldCase: { a: 1, b: 2 }"
     let actual = Yaml.load<MapFieldCase> yaml
-    actual |> should equal (MapFieldCase (Map.ofList [ ("a", 1); ("b", 2) ]))
+    do! actual |> should equal (MapFieldCase (Map.ofList [ ("a", 1); ("b", 2) ]))
+  }
 
   type ManyFieldsCase = ManyFieldsCase of int * string * string
   
-  [<Test>]
-  let ``フィールドが複数あるケース``() =
+  let ``フィールドが複数あるケース`` = test {
     let yaml = "ManyFieldsCase: [ 1, a, b ]"
     let actual = Yaml.load<ManyFieldsCase> yaml
-    actual |> should equal (ManyFieldsCase (1, "a", "b"))
+    do! actual |> should equal (ManyFieldsCase (1, "a", "b"))
+  }
 
   type OneNamedFieldCase = OneNamedFieldCase of x: int
 
-  [<Test>]
-  let ``1つの名前付きフィールドのケース``() =
+  let ``1つの名前付きフィールドのケース`` = test {
     let yaml = "OneNamedFieldCase: { x: 1 }"
     let actual = Yaml.load<OneNamedFieldCase> yaml
-    actual |> should equal (OneNamedFieldCase (x = 1))
+    do! actual |> should equal (OneNamedFieldCase (x = 1))
+  }
 
   type ManyNamedFieldCase = ManyNamedFieldCase of x: int * y: string
   
-  [<Test>]
-  let ``複数の名前付きフィールドのケース``() =
+  let ``複数の名前付きフィールドのケース`` = test {
     let yaml = "ManyNamedFieldCase: { x: 1, y: a }"
     let actual = Yaml.load<ManyNamedFieldCase> yaml
-    actual |> should equal (ManyNamedFieldCase (x = 1, y = "a"))
+    do! actual |> should equal (ManyNamedFieldCase (x = 1, y = "a"))
+  }
 
-  [<Test>]
-  let ``１つの暗黙の名前でも変換できる``() =
+  let ``１つの暗黙の名前でも変換できる`` = test {
     let yaml = "OneFieldCase: { Item: 1 }"
     let actual = Yaml.load<OneFieldCase> yaml
-    actual |> should equal (OneFieldCase 1)
+    do! actual |> should equal (OneFieldCase 1)
+  }
 
-  [<Test>]
-  let ``複数の暗黙の名前でも変換できる``() =
+  let ``複数の暗黙の名前でも変換できる`` = test {
     let yaml = "ManyFieldsCase: { Item1: 1, Item2: a, Item3: b }"
     let actual = Yaml.load<ManyFieldsCase> yaml
-    actual |> should equal (ManyFieldsCase (1, "a", "b"))
+    do! actual |> should equal (ManyFieldsCase (1, "a", "b"))
+  }
 
   type HalfNamedFieldCase =
     | HalfNamedFieldCaseA of x: int * int
     | HalfNamedFieldCaseB of int * y: int
 
-  [<Test>]
-  let ``一つ目の要素のみ名前がついたケースを変換できる``() =
+  let ``一つ目の要素のみ名前がついたケースを変換できる`` = test {
     let yaml = "HalfNamedFieldCaseA: { x: 1, Item2: 2 }"
     let actual = Yaml.load<HalfNamedFieldCase> yaml
-    actual |> should equal (HalfNamedFieldCaseA (1, 2))
+    do! actual |> should equal (HalfNamedFieldCaseA (1, 2))
+  }
 
-  [<Test>]
-  let ``ニつ目の要素のみ名前がついたケースを変換できる``() =
+  let ``ニつ目の要素のみ名前がついたケースを変換できる`` = test {
     let yaml = "HalfNamedFieldCaseB: { Item1: 1, y: 2 }"
     let actual = Yaml.load<HalfNamedFieldCase> yaml
-    actual |> should equal (HalfNamedFieldCaseB (1, 2))
+    do! actual |> should equal (HalfNamedFieldCaseB (1, 2))
+  }
 
   [<CompilationRepresentation(CompilationRepresentationFlags.UseNullAsTrueValue)>]
   type UseNullAsTrueValueCase = NullCase | ValueCase1 of int | ValueCase2 of string
     
-  [<Test>]
-  let ``UseNullAsTrueValueのnullのケース``() =
+  let ``UseNullAsTrueValueのnullのケース`` = test {
     let yaml = "NullCase"
     let actual = Yaml.load<UseNullAsTrueValueCase> yaml
-    actual |> should equal NullCase
+    do! actual |> should equal NullCase
+  }
 
-  [<Test>]
-  let ``UseNullAsTrueValueCaseの値があるケース``() =
+  let ``UseNullAsTrueValueCaseの値があるケース`` = test {
     let yaml = "ValueCase2: a"
     let actual = Yaml.load<UseNullAsTrueValueCase> yaml
-    actual |> should equal (ValueCase2 "a")
+    do! actual |> should equal (ValueCase2 "a")
+  }
 
-  [<TestCase("~")>]
-  [<TestCase("null")>]
-  [<TestCase("None")>]
-  let ``Option.None`` yaml =
-    let actual = Yaml.load<Option<int>> yaml
-    actual |> should equal (None: int option)
-
-  [<TestCase("Some: 1")>]
-  [<TestCase("1")>]
-  let ``Option.Some`` yaml =
-    let actual = Yaml.load<Option<int>> yaml
-    actual |> should equal (Some 1)
-
-[<TestFixture>]
+  let ``Option.None`` =
+    let body yaml = test {
+      let actual = Yaml.load<Option<int>> yaml
+      do! actual |> should equal (None: int option)
+    }
+    parameterize {
+      case ("~")
+      case ("null")
+      case ("None")
+      run body
+    }
+    
+  let ``Option.Some`` =
+    let body yaml = test {
+      let actual = Yaml.load<Option<int>> yaml
+      do! actual |> should equal (Some 1)
+    }
+    parameterize {
+      case ("Some: 1")
+      case ("1")
+      run body
+    }
+    
 module LoadCustomTypeTest =
   open FsYaml.NativeTypes
   open System
@@ -379,8 +430,8 @@ module LoadCustomTypeTest =
     Represent = fun _ -> raise (NotImplementedException())
   }
 
-  [<Test>]
-  let ``ユーザが作成した型をloadできる``() =
+  let ``ユーザが作成した型をloadできる`` = test {
     let yaml = "1"
     let actual = Yaml.loadWith<CustomType> [ customConstructor ] yaml
-    actual |> should equal (CustomType(1))
+    do! actual |> should equal (CustomType(1))
+  }

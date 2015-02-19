@@ -1,126 +1,124 @@
 ﻿module UtilityTest
 
-open NUnit.Framework
-open FsUnit
-
 open FsYaml.Utility
+open Persimmon
+open UseTestNameByReflection
+open Assertions
 
-[<TestFixture>]
 module TypeTest =
   type GenericType<'a> = GeneticType of 'a
 
-  [<TestCase(typeof<int>, "int")>]
-  [<TestCase(typeof<System.DateTime>, "DateTime")>]
-  [<TestCase(typeof<int * string>, "int * string")>]
-  [<TestCase(typeof<int * (int * int)>, "int * (int * int)")>]
-  [<TestCase(typeof<int list>, "int list")>]
-  [<TestCase(typeof<int[] list>, "int[] list")>]
-  [<TestCase(typeof<(int * int) list>, "(int * int) list")>]
-  [<TestCase(typeof<int * int list>, "int * int list")>]
-  [<TestCase(typeof<Map<string, int>>, "Map<string, int>")>]
-  [<TestCase(typeof<GenericType<int>>, "GenericType<int>")>]
-  [<TestCase(typeof<int[]>, "int[]")>]
-  let ``print`` t (expected: string) = Type.print t |> should equal expected
-  
-[<TestFixture>]
+  let print =
+    let body (t, expected) = test {
+      do! should equal expected (Type.print t)
+    }
+    parameterize {
+      case (typeof<int>, "int")
+      case (typeof<System.DateTime>, "DateTime")
+      case (typeof<int * string>, "int * string")
+      case (typeof<int * (int * int)>, "int * (int * int)")
+      case (typeof<int list>, "int list")
+      case (typeof<int[] list>, "int[] list")
+      case (typeof<(int * int) list>, "(int * int) list")
+      case (typeof<int * int list>, "int * int list")
+      case (typeof<Map<string, int>>, "Map<string, int>")
+      case (typeof<GenericType<int>>, "GenericType<int>")
+      case (typeof<int[]>, "int[]")
+      run body
+    }
+
 module RecordTest =
   open Microsoft.FSharp.Reflection
 
   type TestRecord = { Field: int }
 
-  [<Test>]
-  let ``{Type}.{Field}の形式でprintされる``() =
+  let ``{Type}.{Field}の形式でprintされる`` = test {
     let field = FSharpType.GetRecordFields(typeof<TestRecord>).[0]
-    let actual = Record.printField field
-    actual |> should equal "TestRecord.Field"
+    do! Record.printField field |> should equal "TestRecord.Field"
+  }
 
-[<TestFixture>]
 module UnionTest =
   open Microsoft.FSharp.Reflection
 
   type TestUnion = Case
 
-  [<Test>]
-  let ``{Type}.{Case}の形式でprintされる``() =
-    let union = FSharpType.GetUnionCases(typeof<TestUnion>).[0]
-    let actual = Union.printCase union
-    actual |> should equal "TestUnion.Case"
+  let ``{Type}.{Case}の形式でprintされる`` = test {
+    let unionCase = FSharpType.GetUnionCases(typeof<TestUnion>).[0]
+    do! Union.printCase unionCase |> should equal "TestUnion.Case"
+  }
 
-[<TestFixture>]
 module ObjectElementSeq =
-  [<Test>]
-  let ``obj seqをint seqにキャストできる``() =
+  let ``obj seqをint seqにキャストできる`` = test {
     let xs = seq { 1..3 } |> Seq.map box
     let actual = ObjectElementSeq.cast typeof<int> xs
-    unbox<int seq> actual |> should equal (seq { 1..3 })
+    do! unbox<int seq> actual |> should equalSeq (seq { 1..3 })
+  }
 
-  [<Test>]
-  let ``空のseqをint seqにキャストできる``() =
+  let ``空のseqをint seqにキャストできる`` = test {
     let xs = Seq.empty<obj>
     let actual = ObjectElementSeq.cast typeof<int> xs
-    unbox<int seq> actual |> should equal (Seq.empty<int>)
+    do! unbox<int seq> actual |> should equalSeq (Seq.empty<int>)
+  }
 
-  [<Test>]
-  let ``obj seqをint listに変換できる``() =
+  let ``obj seqをint listに変換できる`` = test {
     let xs = seq { 1..3 } |> Seq.map box
     let actual = ObjectElementSeq.toList typeof<int> xs
-    unbox<int list> actual |> should equal [ 1..3 ]
+    do! unbox<int list> actual |> should equal [ 1..3 ]
+  }
 
-  [<Test>]
-  let ``空のseqをint listに変換できる``() =
+  let ``空のseqをint listに変換できる`` = test {
     let xs = Seq.empty<obj>
     let actual = ObjectElementSeq.toList typeof<int> xs
-    unbox<int list> actual |> should equal ([]: int list)
+    do! unbox<int list> actual |> should equal ([]: int list)
+  }
 
-  [<Test>]
-  let ``(obj * obj) seqをMap<string, int>に変換できる``() =
+  let ``(obj * obj) seqをMap<string, int>に変換できる`` = test {
     let xs = [ ("1", 2); ("3", 4); ("4", 5) ] |> Seq.map (fun (k, v) -> (box k, box v))
     let actual = ObjectElementSeq.toMap typeof<string> typeof<int> xs
     let expected = Map.ofList [ ("1", 2); ("3", 4); ("4", 5) ]
-    unbox<Map<string, int>> actual |> should equal expected
+    do! unbox<Map<string, int>> actual |> should equal expected
+  }
 
-  [<Test>]
-  let ``空のseqをMap<string, int>に変換できる``() =
+  let ``空のseqをMap<string, int>に変換できる`` = test {
     let xs = Seq.empty<obj * obj>
     let actual = ObjectElementSeq.toMap typeof<string> typeof<int> xs
-    unbox<Map<string, int>> actual |> should equal Map.empty<string, int>
+    do! unbox<Map<string, int>> actual |> should equal Map.empty<string, int>
+  }
 
-  [<Test>]
-  let ``obj seqをint[]に変換できる``() =
+  let ``obj seqをint[]に変換できる`` = test {
     let xs = seq { 1..3 } |> Seq.map box
     let actual = ObjectElementSeq.toArray typeof<int> xs
-    unbox<int[]> actual |> should equal [| 1..3 |]
+    do! unbox<int[]> actual |> should equal [| 1..3 |]
+  }
 
-  [<Test>]
-  let ``空のseqをint[]に変換できる``() =
+  let ``空のseqをint[]に変換できる`` = test {
     let xs = Seq.empty<obj>
     let actual = ObjectElementSeq.toArray typeof<int> xs
-    unbox<int[]> actual |> should equal (Array.empty<int>)
+    do! unbox<int[]> actual |> should equal (Array.empty<int>)
+  }
 
-[<TestFixture>]
 module BoxedSeqTest =
-  [<Test>]
-  let ``listに対してmapできる``() =
+  let ``listに対してmapできる`` = test {
     let xs = [ 1; 2; 3 ] |> box
     let actual = (typeof<int list>, xs) ||> BoxedSeq.map (fun x -> string x)
-    actual |> should equal (Seq.ofList [ "1"; "2"; "3" ])
+    do! actual |> should equalSeq (Seq.ofList [ "1"; "2"; "3" ])
+  }
 
-  [<Test>]
-  let ``arrayに対してmapできる``() =
+  let ``arrayに対してmapできる`` = test {
     let xs = [| 1; 2; 3 |] |> box
     let actual = (typeof<int[]>, xs) ||> BoxedSeq.map (fun x -> string x)
-    actual |> should equal (Seq.ofList [ "1"; "2"; "3" ])
+    do! actual |> should equalSeq (Seq.ofList [ "1"; "2"; "3" ])
+  }
 
-  [<Test>]
-  let ``seqに対してmapできる``() =
+  let ``seqに対してmapできる`` = test {
     let xs = seq { 1..3 } |> box
     let actual = (typeof<int seq>, xs) ||> BoxedSeq.map (fun x -> string x)
-    actual |> should equal (Seq.ofList [ "1"; "2"; "3" ])
+    do! actual |> should equalSeq (Seq.ofList [ "1"; "2"; "3" ])
+  }
 
-[<TestFixture>]
 module BoxedMapTest =
-  [<Test>]
-  let ``mapをtoSeqできる``() =
+  let ``mapをtoSeqできる`` = test {
     let map = Map.ofList [ ("a", 1); ("b", 2) ]
     let actual = BoxedMap.toSeq typeof<Map<string, int>> map
-    actual |> should equal [ (box "a", box 1); (box "b", box 2) ]
+    do! actual |> should equalSeq [ (box "a", box 1); (box "b", box 2) ]
+  }

@@ -1,8 +1,8 @@
-﻿[<NUnit.Framework.TestFixture>]
-module YamlTest
+﻿module YamlTest
 
-open FsUnit
-open NUnit.Framework
+open Persimmon
+open UseTestNameByReflection
+open Assertions
 
 open FsYaml
 
@@ -26,8 +26,7 @@ let value = {
     }
 }
 
-[<Test>]
-let ``オブジェクトをYamlの文字列にできる``() =
+let ``オブジェクトをYamlの文字列にできる`` = test {
   let actual = Yaml.dump value
   let expected = """FieldA:
 - 1
@@ -47,10 +46,11 @@ FieldD:
   FieldC: "abcdefghijk"
   FieldD: null
 """
-  actual |> should equal expected
+  do! actual |> should equal expected
+}
 
-[<Test>]
-let ``dumpしてloadすると元の値になる``() =
+let ``dumpしてloadすると元の値になる`` = test {
   let yaml = Yaml.dump value
   let actual = Yaml.load<ComplexType> yaml
-  actual |> should equal value
+  do! actual |> should equal value
+}

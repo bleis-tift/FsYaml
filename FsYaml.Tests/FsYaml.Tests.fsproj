@@ -60,6 +60,7 @@
   <ItemGroup>
     <Content Include="packages.config" />
     <Content Include="app.config" />
+    <Compile Include="Assertions.fs" />
     <Compile Include="UtilityTest.fs" />
     <Compile Include="TypesTest.fs" />
     <Compile Include="LoadingTest.fs" />
@@ -67,16 +68,12 @@
     <Compile Include="YamlTest.fs" />
   </ItemGroup>
   <ItemGroup>
-    <Reference Include="FsUnit.NUnit">
-      <HintPath>..\packages\FsUnit.1.3.0.1\Lib\Net40\FsUnit.NUnit.dll</HintPath>
-      <Private>True</Private>
-    </Reference>
     <Reference Include="mscorlib" />
     <Reference Include="FSharp.Core, Version=$(TargetFSharpCoreVersion), Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a">
       <Private>True</Private>
     </Reference>
-    <Reference Include="nunit.framework">
-      <HintPath>..\packages\NUnit.2.6.3\lib\nunit.framework.dll</HintPath>
+    <Reference Include="Persimmon">
+      <HintPath>..\packages\Persimmon.1.0.0-beta2\lib\net20\Persimmon.dll</HintPath>
       <Private>True</Private>
     </Reference>
     <Reference Include="System" />

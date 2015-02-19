@@ -1,15 +1,15 @@
 ﻿module TypesTest
 
-open NUnit.Framework
-open FsUnit
+open Persimmon
+open UseTestNameByReflection
+open Assertions
 
-[<TestFixture>]
 module MappingTest =
   open FsYaml.RepresentationTypes
   open System.Collections.Generic
 
-  [<Test>]
-  [<ExpectedException(typeof<KeyNotFoundException>)>]
-  let ``findで見つからない場合は例外が発生する``() =
+  let ``findで見つからない場合は例外が発生する`` = test {
     let m = Map.ofList [ (Scalar (Plain "1", None), Scalar (Plain "2", None)) ]
-    Mapping.find "3" m |> ignore
+    let! e = trap { it (Mapping.find "3" m) }
+    do! e.GetType() |> should equal typeof<KeyNotFoundException>
+  }

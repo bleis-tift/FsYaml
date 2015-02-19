@@ -8,8 +8,6 @@ module RepresentationTypes =
     | Plain of string
     /// Plain形式以外のScalar
     | NonPlain of string
-  with
-    override x.ToString() = sprintf "%A" x
 
   /// Scalarを操作するモジュールです。
   [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
@@ -32,8 +30,6 @@ module RepresentationTypes =
     | Mapping of Map<YamlObject, YamlObject> * Position option
     /// Scalarを特殊化したNullの値
     | Null of Position option
-  with
-    override x.ToString() = sprintf "%A" x
 
   /// YamlObjectを操作するモジュールです。
   [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
