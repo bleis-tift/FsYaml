@@ -27,14 +27,35 @@ module TypeTest =
       run body
     }
 
-module RecordTest =
+module Attribute =
+  open System
+
+  type TestAttribute() = inherit Attribute()
+
+  [<TestAttribute>]
+  type WithAttribute() = class end
+
+  type WithoutAttribute() = class end
+
+  let tryGetCustomAttribute =
+    let body (t, expected) = test {
+      let actual = Attribute.tryGetCustomAttribute<TestAttribute> t
+      do! Option.isSome actual |> should equal expected
+    }
+    parameterize {
+      case (typeof<WithAttribute>, true)
+      case (typeof<WithoutAttribute>, false)
+      run body
+    }
+
+module PropertyInfoTest =
   open Microsoft.FSharp.Reflection
 
   type TestRecord = { Field: int }
 
   let ``{Type}.{Field}の形式でprintされる`` = test {
     let field = FSharpType.GetRecordFields(typeof<TestRecord>).[0]
-    do! Record.printField field |> should equal "TestRecord.Field"
+    do! PropertyInfo.print field |> should equal "TestRecord.Field"
   }
 
 module UnionTest =
@@ -100,25 +121,25 @@ module ObjectElementSeq =
 module BoxedSeqTest =
   let ``listに対してmapできる`` = test {
     let xs = [ 1; 2; 3 ] |> box
-    let actual = (typeof<int list>, xs) ||> BoxedSeq.map (fun x -> string x)
+    let actual = (typeof<int list>, xs) ||> RuntimeSeq.map (fun x -> string x)
     do! actual |> should equalSeq (Seq.ofList [ "1"; "2"; "3" ])
   }
 
   let ``arrayに対してmapできる`` = test {
     let xs = [| 1; 2; 3 |] |> box
-    let actual = (typeof<int[]>, xs) ||> BoxedSeq.map (fun x -> string x)
+    let actual = (typeof<int[]>, xs) ||> RuntimeSeq.map (fun x -> string x)
     do! actual |> should equalSeq (Seq.ofList [ "1"; "2"; "3" ])
   }
 
   let ``seqに対してmapできる`` = test {
     let xs = seq { 1..3 } |> box
-    let actual = (typeof<int seq>, xs) ||> BoxedSeq.map (fun x -> string x)
+    let actual = (typeof<int seq>, xs) ||> RuntimeSeq.map (fun x -> string x)
     do! actual |> should equalSeq (Seq.ofList [ "1"; "2"; "3" ])
   }
 
 module BoxedMapTest =
   let ``mapをtoSeqできる`` = test {
     let map = Map.ofList [ ("a", 1); ("b", 2) ]
-    let actual = BoxedMap.toSeq typeof<Map<string, int>> map
+    let actual = RuntimeMap.toSeq typeof<Map<string, int>> map
     do! actual |> should equalSeq [ (box "a", box 1); (box "b", box 2) ]
   }

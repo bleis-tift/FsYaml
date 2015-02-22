@@ -120,8 +120,14 @@
   <data name="allowedOnlyScalar" xml:space="preserve">
     <value>The mapping key is allowed only scalar in FsYaml.</value>
   </data>
+  <data name="failedGetDefaultValue" xml:space="preserve">
+    <value>It failed to get default value of {0}.</value>
+  </data>
   <data name="failedParsing" xml:space="preserve">
     <value>Error in parsing yaml.</value>
+  </data>
+  <data name="invalidDefaultValueType" xml:space="preserve">
+    <value>The type of {0} must be {1}. But it was {2}.</value>
   </data>
   <data name="mapKeyMustBeScalar" xml:space="preserve">
     <value>{0} key must be scalar. But it was {1}.</value>
@@ -155,5 +161,8 @@
   </data>
   <data name="unionCaseNotFound" xml:space="preserve">
     <value>Any {0} cases is not found.</value>
+  </data>
+  <data name="zeroUndefined" xml:space="preserve">
+    <value>The zero of {0} is not defined.</value>
   </data>
 </root>

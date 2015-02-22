@@ -3,11 +3,17 @@
 open FsYaml.Utility
 open FsYaml.NativeTypes
 
+let constructZero definitions t =
+  match definitions |> Seq.tryFind (fun d -> d.Accept t) with
+  | Some d -> d.Zero t
+  | None -> None
+
 let rec construct' definitions t yaml =
   match definitions |> Seq.tryFind (fun d -> d.Accept t) with
   | Some d ->
     let recC = construct' definitions
-    d.Construct recC t yaml
+    let zero = constructZero definitions
+    d.Construct recC zero t yaml
   | None -> raise (FsYamlException.WithYaml(yaml, Messages.typeDefinitionNotFound, Type.print t))
 
 let construct<'a> definitions yaml = construct' definitions typeof<'a> yaml :?> 'a

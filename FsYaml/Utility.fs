@@ -83,10 +83,21 @@ module Type =
     let elem = t.GetElementType()
     sprintf "%s[]" (print elem)
 
-module Record =
+module Attribute =
+  open System
   open System.Reflection
 
-  let printField (x: PropertyInfo) = sprintf "%s.%s" (Type.print x.DeclaringType) x.Name
+  let tryGetCustomAttribute<'a when 'a :> Attribute> (x: MemberInfo) =
+    let attr = x.GetCustomAttribute(typeof<'a>, false)
+    if attr = null then
+      None
+    else
+      Some (attr :?> 'a)
+      
+module PropertyInfo =
+  open System.Reflection
+
+  let print (x: PropertyInfo) = sprintf "%s.%s" (Type.print x.DeclaringType) x.Name
 
 module Union =
   open Microsoft.FSharp.Reflection
@@ -99,6 +110,9 @@ module Seq =
       None
     else
       Some (Seq.zip xs ys)
+
+module Option =
+  let filter f = Option.bind (fun x -> if f x then Some x else None)
 
 let fsharpAsembly = typedefof<list<_>>.Assembly
 
@@ -135,7 +149,7 @@ module ObjectElementSeq =
     xs |> Seq.iteri (fun i x -> array.SetValue(x, i))
     box array
 
-module BoxedSeq =
+module RuntimeSeq =
   open System
   open Microsoft.FSharp.Reflection
 
@@ -155,7 +169,27 @@ module BoxedSeq =
     let mapFunc = seqModule.GetMethod("Map").MakeGenericMethod(elementType, typeof<'a>)
     mapFunc.Invoke(null, [| mapping; xs |]) :?> seq<'a>
 
-module BoxedMap =
+  let empty (t: Type) =
+    let emptyFunc = seqModule.GetMethod("Empty").MakeGenericMethod(t)
+    emptyFunc.Invoke(null, [||])
+
+module RuntimeList =
+  open System
+  let listModule = fsharpAsembly.GetType("Microsoft.FSharp.Collections.ListModule")
+
+  let empty (t: Type) =
+    let emptyFunc = listModule.GetMethod("Empty").MakeGenericMethod(t)
+    emptyFunc.Invoke(null, [||])
+
+module RuntimeArray =
+  open System
+  let arrayModule = fsharpAsembly.GetType("Microsoft.FSharp.Collections.ArrayModule")
+
+  let empty (t: Type) =
+    let emptyFunc = arrayModule.GetMethod("Empty").MakeGenericMethod(t)
+    emptyFunc.Invoke(null, [||])
+
+module RuntimeMap =
   open System
   open Microsoft.FSharp.Reflection
 
@@ -168,4 +202,8 @@ module BoxedMap =
     let toListFunc = mapModule.GetMethod("ToSeq").MakeGenericMethod(keyType, valueType)
     let resultSeq = toListFunc.Invoke(null, [| map |])
     let resultSeqType = resultSeq.GetType()
-    BoxedSeq.map (fun kv -> let elems = FSharpValue.GetTupleFields(kv) in (elems.[0], elems.[1])) resultSeqType resultSeq
+    RuntimeSeq.map (fun kv -> let elems = FSharpValue.GetTupleFields(kv) in (elems.[0], elems.[1])) resultSeqType resultSeq
+
+  let empty (keyType: Type, valueType: Type) =
+    let emptyFunc = mapModule.GetMethod("Empty").MakeGenericMethod(keyType, valueType)
+    emptyFunc.Invoke(null, [||])

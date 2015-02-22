@@ -184,20 +184,6 @@ module LoadTest =
     do! actual |> should equal (TimeSpan.Parse(yaml))
   }
 
-  type TestRecord = { A: int; B: string }
-
-  let recordに変換できる = test {
-    let yaml = "{ A: 123, B: abc }"
-    let actual = Yaml.load<TestRecord> yaml
-    do! actual |> should equal { A = 123; B = "abc" }
-  }
-
-  let recordの項目が足りない場合は失敗する = test {
-    let yaml = "{ A: 123 }"
-    let! e = trap { it (Yaml.load<TestRecord> yaml) }
-    do! e.GetType() |> should equal typeof<FsYamlException>
-  }
-
   let tupleに変換できる = test {
     let yaml = "[ 1, 2, 3, abc ]"
     let actual = Yaml.load<int * int * string * string> yaml
@@ -402,9 +388,128 @@ module LoadUnionTest =
       case ("1")
       run body
     }
-    
+
+module LoadRecordTest =
+  type TestRecord = { A: int; B: string }
+
+  let recordに変換できる = test {
+    let yaml = "{ A: 123, B: abc }"
+    let actual = Yaml.load<TestRecord> yaml
+    do! actual |> should equal { A = 123; B = "abc" }
+  }
+
+  let recordの項目が足りない場合は失敗する = test {
+    let yaml = "{ A: 123 }"
+    let! e = trap { it (Yaml.load<TestRecord> yaml) }
+    do! e.GetType() |> should equal typeof<FsYamlException>
+  }
+
+  module OptionalMemberTest =
+    module StaticDefaultValueField =
+      type WithDefaultMember = {
+        A: string
+        [<OptionalMember>]
+        B: int
+      }
+      with
+        static member DefaultB = 3
+
+      let DefaultValueが定義されている = test {
+        let yaml = "{ A: abc }"
+        let actual = Yaml.load<WithDefaultMember> yaml
+        do! actual |> should equal { A = "abc"; B = 3 }
+      }
+
+      type WithoutAttribute = {
+        A: string
+        B: int
+      }
+      with
+        static member DefaultB = 3
+
+      let OptionalMember属性が無い場合は例外 = test {
+        let yaml = "{ A: abc }"
+        let! e = trap { it (Yaml.load<WithoutAttribute> yaml) }
+        do! e.GetType() |> should equal typeof<FsYamlException>
+      }
+
+      type InvalidType = {
+        A: string
+        [<OptionalMember>]
+        B: int
+      }
+      with
+        static member DefaultB = "3"
+
+      let DefaultValueの型が違う場合は例外 = test {
+        let yaml = "{ A: abc }"
+        let! e = trap { it (Yaml.load<InvalidType> yaml) }
+        do! e.GetType() |> should equal typeof<FsYamlException>
+        do! e.InnerException.GetType() |> should equal typeof<FsYamlException>
+      }
+
+    module ZeroDefaultValue =
+      open System
+
+      type WithZero = {
+        A: int
+        [<OptionalMember>]
+        B: int
+      }
+
+      let zeroの値を使う = test {
+        let yaml = "{ A: 1 }"
+        let actual = Yaml.load<WithZero> yaml
+        do! actual |> should equal { A = 1; B = 0 }
+      }
+
+      type ZeroUndefined = {
+        A: int
+        [<OptionalMember>]
+        B: DateTime
+      }
+
+      let zeroがサポートされていない場合は例外 = test {
+        let yaml = "{ A: 1 }"
+        let! e = trap { it (Yaml.load<ZeroUndefined> yaml) }
+        do! e.GetType() |> should equal typeof<FsYamlException>
+        do! e.InnerException.GetType() |> should equal typeof<FsYamlException>
+      }
+
+module ZeroTest =
+  let zero t = Native.constructZero TypeDefinitions.defaultDefinitions t
+  [<CompilationRepresentation(CompilationRepresentationFlags.UseNullAsTrueValue)>]
+  type UseNullAsTrueValueCase = NullCase | ValueCase1 of int
+
+  let zeroを生成できる =
+    let body (t, expected) = test {
+      let actual = zero t
+      do! actual |> should equal (Some expected)
+    }
+    parameterize {
+      case (typeof<int []>, box (Array.empty<int>))
+      case (typeof<int list>, box (List.empty<int>))
+      case (typeof<Map<string, int>>, box (Map.empty<string, int>))
+      case (typeof<int option>, box (None: int option))
+      case (typeof<UseNullAsTrueValueCase>, box NullCase)
+      run body
+    }
+
+  let seqのzeroを生成できる = test {
+    let actual = (zero typeof<int seq>).Value |> unbox<int seq>
+    do! actual |> should equalSeq Seq.empty<int>
+  }
+
+  type NormalUnion = A
+
+  let UseNullAsTrueValueCaseが指定されない判別共用体のZeroは無い = test {
+    let actual = zero typeof<NormalUnion>
+    do! actual |> should equal None
+  }
+   
 module LoadCustomTypeTest =
   open FsYaml.NativeTypes
+  open FsYaml.CustomTypeDefinition
   open System
 
   type CustomType(x: int) =
@@ -421,12 +526,13 @@ module LoadCustomTypeTest =
 
   let customConstructor = { 
     Accept = ((=) typeof<CustomType>)
-    Construct = fun construct' t yaml ->
+    Construct = fun construct' zero t yaml ->
       match yaml with
       | Scalar _ as x ->
         let value = construct' typeof<int> x :?> int
         CustomType(value) |> box
       | _ -> null
+    Zero = zeroUndefined
     Represent = fun _ -> raise (NotImplementedException())
   }
 
