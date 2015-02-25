@@ -99,6 +99,7 @@ publish/
 
 # NuGet Packages Directory
 packages/
+tools/
 *.nupkg
 
 # Windows Azure Build Output

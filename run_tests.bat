@@ -1,0 +1,1 @@
+.\tools\Persimmon.Console\tools\Persimmon.Console.exe .\FsYaml.Tests\bin\Debug\FsYaml.Tests.dll
