@@ -7,8 +7,8 @@ open FsYaml.RepresentationTypes
 open FsYaml.NativeTypes
 open FsYaml.CustomTypeDefinition
 
-let intDef = { Accept = (=)typeof<int>; Construct = constructFromScalar int; Zero = constZero 0; Represent = representAsPlain string }
-let int64Def = { Accept = (=)typeof<int64>; Construct = constructFromScalar int64; Zero = constZero 0L; Represent = representAsPlain string }
+let intDef = { Accept = (=)typeof<int>; Construct = constructFromScalar int; Represent = representAsPlain string }
+let int64Def = { Accept = (=)typeof<int64>; Construct = constructFromScalar int64; Represent = representAsPlain string }
 let floatDef = {
   Accept = (=)typeof<float>
   Construct = constructFromScalar (String.toLower >> function
@@ -16,7 +16,6 @@ let floatDef = {
     | "-.inf" -> Double.NegativeInfinity
     | ".nan" -> Double.NaN
     | otherwise -> float otherwise)
-  Zero = constZero 0.0
   Represent = fun represent t obj ->
     let n = unbox<float> obj
     let text =
@@ -26,23 +25,21 @@ let floatDef = {
       else string n
     Scalar (Plain text, None)
 }
-let stringDef = { Accept = (=)typeof<string>; Construct = MaybeNull.constructFromScalar id; Zero = constZero ""; Represent = MaybeNull.representAsNonPlain string }
+let stringDef = { Accept = (=)typeof<string>; Construct = MaybeNull.constructFromScalar id; Represent = MaybeNull.representAsNonPlain string }
 let boolDef = {
   Accept = (=)typeof<bool>
   Construct = constructFromScalar (String.toLower >> function
     | "y" | "yes" | "on" -> true
     | "n" | "no"  | "off" -> false
     | otherwise -> Boolean.Parse(otherwise))
-  Zero = constZero false
   Represent = fun represent t obj ->
     let text = unbox<bool> obj |> string |> String.toLower 
     Scalar (Plain text, None)
 }
-let decimalDef = { Accept = (=)typeof<decimal>; Construct = constructFromScalar decimal; Zero = constZero 0m; Represent = representAsPlain string }
+let decimalDef = { Accept = (=)typeof<decimal>; Construct = constructFromScalar decimal; Represent = representAsPlain string }
 let datetimeDef = {
   Accept = (=)typeof<DateTime>
   Construct = constructFromScalar (fun x -> DateTime.Parse(x))
-  Zero = zeroUndefined
   Represent = representAsNonPlain (fun x ->
     let d = unbox<DateTime> x
     d.ToString("yyyy-MM-dd HH:mm:ss.fff"))
@@ -50,7 +47,6 @@ let datetimeDef = {
 let timespanDef = {
   Accept = (=)typeof<TimeSpan>
   Construct = constructFromScalar (fun x -> TimeSpan.Parse(x))
-  Zero = constZero (TimeSpan.Zero)
   Represent = representAsNonPlain (fun x ->
     let t = unbox<TimeSpan> x
     t.ToString(@"hh\:mm\:ss\.fff")
@@ -75,36 +71,21 @@ module RecordConstructor =
       else
         raise (FsYamlException.Create(Messages.invalidDefaultValueType, PropertyInfo.print defaultValueProperty, Type.print expectedType, Type.print actualType))
 
-  let getZero zero (field: PropertyInfo) =
-    match zero field.PropertyType with
-    | Some x -> x
-    | None -> raise (FsYamlException.Create(Messages.zeroUndefined, Type.print field.PropertyType))
+  let tryGetDefaultValue (field: PropertyInfo) =
+    tryGetDefaultValueFromStaticField field
 
-  let tryGetDefaultValue zero yaml (field: PropertyInfo) =
-    Attribute.tryGetCustomAttribute<OptionalMemberAttribute> field
-    |> Option.map (fun optionalMemberAttr ->
-      try
-        match tryGetDefaultValueFromStaticField field with
-        | Some x -> x
-        | None -> getZero zero field
-      with
-        | :? FsYamlException as ex ->
-          raise (FsYamlException.WithYaml(ex, yaml, Messages.failedGetDefaultValue, PropertyInfo.print field))
-        | ex -> reraise()
-    )
-
-  let tryFindFieldValue construct' zero yaml mapping (field: PropertyInfo) =
+  let tryFindFieldValue construct' yaml mapping (field: PropertyInfo) =
     match Mapping.tryFind field.Name mapping with
     | Some valueObj -> Some (construct' field.PropertyType valueObj)
-    | None -> tryGetDefaultValue zero yaml field
+    | None -> tryGetDefaultValue field
 
-  let construct construct' zero t yaml =
+  let construct construct' t yaml =
     match yaml with
     | Mapping (mapping, _) ->
       let values =
         FSharpType.GetRecordFields(t)
         |> Array.map (fun field ->
-          match tryFindFieldValue construct' zero yaml mapping field with
+          match tryFindFieldValue construct' yaml mapping field with
           | Some valueObj -> valueObj
           | None -> raise (FsYamlException.WithYaml(yaml, Messages.recordFieldNotFound, PropertyInfo.print field)))
       FSharpValue.MakeRecord(t, values)
@@ -113,7 +94,6 @@ module RecordConstructor =
 let recordDef = {
   Accept = (fun t -> FSharpType.IsRecord(t))
   Construct = RecordConstructor.construct
-  Zero = zeroUndefined
   Represent = fun represent t obj ->
     let values =
       FSharpType.GetRecordFields(t)
@@ -128,7 +108,7 @@ let recordDef = {
 
 let tupleDef = {
   Accept = (fun t -> FSharpType.IsTuple(t))
-  Construct = fun construct' zero t yaml ->
+  Construct = fun construct' t yaml ->
     match yaml with
     | Sequence (sequence, _) ->
       let elementTypes = FSharpType.GetTupleElements(t)
@@ -138,7 +118,6 @@ let tupleDef = {
         FSharpValue.MakeTuple(tupleValues, t)
       | None -> raise (FsYamlException.WithYaml(yaml, Messages.tupleElementNumber, Type.print t, Array.length elementTypes))
     | otherwise -> raise (mustBeSequence t otherwise)
-  Zero = zeroUndefined
   Represent = fun represent t obj ->
     let values =
       Seq.zip (FSharpType.GetTupleElements(t)) (FSharpValue.GetTupleFields(obj))
@@ -149,8 +128,7 @@ let tupleDef = {
 
 let listDef = {
   Accept = (isGenericTypeDef typedefof<list<_>>)
-  Zero = fun t -> Some (RuntimeList.empty (RuntimeSeq.elementType t))
-  Construct = fun construct' zero t yaml ->
+  Construct = fun construct' t yaml ->
     match yaml with
     | Sequence (sequence, _) ->
       let elementType = t.GetGenericArguments().[0]
@@ -162,7 +140,7 @@ let listDef = {
 
 let mapDef = {
   Accept = (isGenericTypeDef typedefof<Map<_, _>>)
-  Construct = fun construct' zero t yaml ->
+  Construct = fun construct' t yaml ->
     match yaml with
     | Mapping (mapping, _) ->
       let keyType, valueType = let ts = t.GetGenericArguments() in (ts.[0], ts.[1])
@@ -175,7 +153,6 @@ let mapDef = {
         )
       ObjectElementSeq.toMap keyType valueType values
     | otherwise -> raise (mustBeMapping t otherwise)
-  Zero = fun t -> Some (RuntimeMap.empty (RuntimeMap.elementTypes t))
   Represent = fun represent t obj ->
     let keyType, valueType = RuntimeMap.elementTypes t
     let values =
@@ -194,27 +171,25 @@ let mapDef = {
 
 let arrayDef = {
   Accept = (fun t -> t.IsArray)
-  Construct = fun construct' zero t yaml ->
+  Construct = fun construct' t yaml ->
     match yaml with
     | Sequence (sequence, _) ->
       let elementType = t.GetElementType()
       let values = Seq.map (construct' elementType) sequence
       ObjectElementSeq.toArray elementType values
     | otherwise -> raise (mustBeSequence t otherwise)
-  Zero = fun t -> Some (RuntimeArray.empty (RuntimeSeq.elementType t))
   Represent = representSeqAsSequence
 }
 
 let seqDef = {
   Accept = (isGenericTypeDef typedefof<seq<_>>)
-  Construct = fun construct' zero t yaml ->
+  Construct = fun construct' t yaml ->
     match yaml with
     | Sequence (sequence, _) ->
       let elementType = t.GetGenericArguments().[0]
       let xs = Seq.map (construct' elementType) sequence
       ObjectElementSeq.cast elementType xs
     | otherwise -> raise (mustBeSequence t otherwise)
-  Zero = fun t -> Some (RuntimeSeq.empty (RuntimeSeq.elementType t))
   Represent = representSeqAsSequence
 }
 
@@ -283,11 +258,6 @@ module UnionConstructor =
     | 1 -> oneFieldCase construct' yaml union
     | _ -> manyFieldsCase construct' yaml union
 
-  let tryGetZero (t: Type) =
-    Attribute.tryGetCustomAttribute<CompilationRepresentationAttribute> t
-    |> Option.filter (fun x -> (x.Flags &&& CompilationRepresentationFlags.UseNullAsTrueValue) = CompilationRepresentationFlags.UseNullAsTrueValue)
-    |> Option.map (fun _ -> null)
-
 module UnionRepresenter =
   let caseName (union: UnionCaseInfo) = Scalar (Plain union.Name, None)
 
@@ -340,17 +310,16 @@ module UnionRepresenter =
 
 let unionDef = {
   Accept = fun t -> FSharpType.IsUnion(t)
-  Construct = fun construct' zero t yaml ->
+  Construct = fun construct' t yaml ->
     match FSharpType.GetUnionCases(t) |> Seq.tryPick (UnionConstructor.tryConstruct construct' yaml) with
     | Some x -> x
     | None -> raise (FsYamlException.WithYaml(yaml, Messages.unionCaseNotFound, Type.print t))
-  Zero = UnionConstructor.tryGetZero
   Represent = UnionRepresenter.represent
 }
 
 let optionDef = {
   Accept = fun t -> FSharpType.IsUnion(t) && isGenericTypeDef typedefof<Option<_>> t
-  Construct = fun construct' zero t yaml ->
+  Construct = fun construct' t yaml ->
     let noneCase, someCase = let xs = FSharpType.GetUnionCases(t) in (xs.[0], xs.[1])
     match yaml with
     | Null _ -> (UnionConstructor.makeUnion noneCase [])
@@ -359,8 +328,7 @@ let optionDef = {
         let parameterType = t.GetGenericArguments().[0]
         let value = construct' parameterType yaml
         UnionConstructor.makeUnion someCase [ value ]
-      with _ ->  unionDef.Construct construct' zero t yaml
-  Zero = fun t -> Some null // None is null
+      with _ ->  unionDef.Construct construct' t yaml
   Represent = fun represent t obj ->
     match obj with
     | null -> Null None

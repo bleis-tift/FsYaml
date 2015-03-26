@@ -169,26 +169,6 @@ module RuntimeSeq =
     let mapFunc = seqModule.GetMethod("Map").MakeGenericMethod(elementType, typeof<'a>)
     mapFunc.Invoke(null, [| mapping; xs |]) :?> seq<'a>
 
-  let empty (t: Type) =
-    let emptyFunc = seqModule.GetMethod("Empty").MakeGenericMethod(t)
-    emptyFunc.Invoke(null, [||])
-
-module RuntimeList =
-  open System
-  let listModule = fsharpAsembly.GetType("Microsoft.FSharp.Collections.ListModule")
-
-  let empty (t: Type) =
-    let emptyFunc = listModule.GetMethod("Empty").MakeGenericMethod(t)
-    emptyFunc.Invoke(null, [||])
-
-module RuntimeArray =
-  open System
-  let arrayModule = fsharpAsembly.GetType("Microsoft.FSharp.Collections.ArrayModule")
-
-  let empty (t: Type) =
-    let emptyFunc = arrayModule.GetMethod("Empty").MakeGenericMethod(t)
-    emptyFunc.Invoke(null, [||])
-
 module RuntimeMap =
   open System
   open Microsoft.FSharp.Reflection
@@ -203,7 +183,3 @@ module RuntimeMap =
     let resultSeq = toListFunc.Invoke(null, [| map |])
     let resultSeqType = resultSeq.GetType()
     RuntimeSeq.map (fun kv -> let elems = FSharpValue.GetTupleFields(kv) in (elems.[0], elems.[1])) resultSeqType resultSeq
-
-  let empty (keyType: Type, valueType: Type) =
-    let emptyFunc = mapModule.GetMethod("Empty").MakeGenericMethod(keyType, valueType)
-    emptyFunc.Invoke(null, [||])

@@ -168,7 +168,4 @@
   <data name="unionCaseNotFound" xml:space="preserve">
     <value>Any {0} cases is not found.</value>
   </data>
-  <data name="zeroUndefined" xml:space="preserve">
-    <value>The zero of {0} is not defined.</value>
-  </data>
 </root>

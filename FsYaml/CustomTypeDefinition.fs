@@ -30,7 +30,7 @@ let mustBeMapping t actual = FsYamlException.WithYaml(actual, Messages.mustBeMap
 /// <c>YamlObject.Scalar</c>からオブジェクトを生成します。
 /// </summary>
 /// <param name="f"><c>YamlObject.Scalar</c>の値をオブジェクトへ変換する関数</param>
-let constructFromScalar f = fun construct' zero t yaml ->
+let constructFromScalar f = fun construct' t yaml ->
   match yaml with
   | Scalar (s, _) -> Scalar.value s |> f |> box
   | otherwise -> raise (mustBeScalar t otherwise)
@@ -44,11 +44,6 @@ let representAsPlain f = fun represent t obj -> Scalar (Plain (f obj), None)
 /// </summary>
 /// <param name="f">オブジェクトを<c>YamlObject.Scalar</c>の値へ変換する関数</param>
 let representAsNonPlain f = fun represent t obj -> Scalar (NonPlain (f obj), None)
-
-/// 定数のZeroを定義します。イミュータブルなオブジェクトを設定して下さい。
-let constZero x = fun t -> Some (box x)
-/// Zeroを定義できません。
-let zeroUndefined = fun t -> None
 
 /// <summary>
 /// Seq型のオブジェクトから<c>YamlObject.Sequence</c>へ変換します。
@@ -64,7 +59,7 @@ module MaybeNull =
   /// <c>YamlObject.Scalar</c>からオブジェクトを生成します。値が<c>YamlObject.Null</c>の場合はnullを返します。
   /// </summary>
   /// <param name="f"><c>YamlObject.Scalar</c>の値をオブジェクトへ変換する関数</param>
-  let constructFromScalar f = fun construct' zero t yaml ->
+  let constructFromScalar f = fun construct' t yaml ->
     match yaml with
     | Scalar (s, _) -> Scalar.value s |> f |> box
     | Null _ -> null

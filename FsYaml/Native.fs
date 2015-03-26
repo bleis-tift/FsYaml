@@ -3,18 +3,12 @@
 open FsYaml.Utility
 open FsYaml.NativeTypes
 
-let constructZero definitions t =
-  match definitions |> Seq.tryFind (fun d -> d.Accept t) with
-  | Some d -> d.Zero t
-  | None -> None
-
 let rec construct' definitions t yaml =
   match definitions |> Seq.tryFind (fun d -> d.Accept t) with
   | Some d ->
     let recC = construct' definitions
-    let zero = constructZero definitions
     try
-      d.Construct recC zero t yaml
+      d.Construct recC t yaml
     with
       | :? FsYamlException -> reraise()
       | ex -> raise (FsYamlException.WithYaml(ex, yaml, Messages.failedConstruct, Type.print t))

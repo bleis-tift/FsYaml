@@ -2,10 +2,6 @@
 
 open System
 
-/// Yamlをロードするときに、メンバが省略可能であることを示します。
-[<AttributeUsage(AttributeTargets.Field ||| AttributeTargets.Property)>]
-type OptionalMemberAttribute() = inherit Attribute()
-
 /// YamlのRepresentation層の型を提供します。
 module RepresentationTypes =
   /// Scalar Nodeの値
@@ -79,10 +75,6 @@ module NativeTypes =
   /// 再帰的にYamlからオブジェクトに変換します。ジェネリック型の要素や、メンバーの変換に使用します。
   /// </summary>
   type RecursiveConstructor = Constructor
-  /// <summary>
-  /// 指定された型のデフォルト値を返します。デフォルト値を定義できない場合はNoneを返します。
-  /// </summary>
-  type ZeroConstructor = Type -> obj option
 
   /// <summary>
   /// <c>Type</c>が表す型のオブジェクトをYamlに変換します。
@@ -98,9 +90,7 @@ module NativeTypes =
     /// 渡された型が変換可能か返します。
     Accept: Type -> bool
     /// Yamlからオブジェクトに変換します。
-    Construct: RecursiveConstructor -> ZeroConstructor -> Constructor
-    /// 型のデフォルト値を返します。デフォルト値を定義できない場合はNoneを返します。
-    Zero: ZeroConstructor
+    Construct: RecursiveConstructor -> Constructor
     /// オブジェクトからYamlに変換します。
     Represent: RecursiveRepresenter -> Representer
   }
