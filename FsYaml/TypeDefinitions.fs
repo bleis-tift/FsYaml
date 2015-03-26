@@ -71,8 +71,17 @@ module RecordConstructor =
       else
         raise (FsYamlException.Create(Messages.invalidDefaultValueType, PropertyInfo.print defaultValueProperty, Type.print expectedType, Type.print actualType))
 
+  let tryGetDefaultValueFromOption (field: PropertyInfo) =
+    let t = field.PropertyType
+    if t |> isGenericTypeDef typedefof<option<_>> then
+      Some null // None is null
+    else
+      None
+
   let tryGetDefaultValue (field: PropertyInfo) =
-    tryGetDefaultValueFromStaticField field
+    match tryGetDefaultValueFromStaticField field with
+    | Some _ as x -> x
+    | None -> tryGetDefaultValueFromOption field
 
   let tryFindFieldValue construct' yaml mapping (field: PropertyInfo) =
     match Mapping.tryFind field.Name mapping with

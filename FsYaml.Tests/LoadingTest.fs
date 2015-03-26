@@ -431,7 +431,21 @@ module LoadRecordTest =
         let! e = trap { it (Yaml.load<InvalidType> yaml) }
         do! e.GetType() |> should equal typeof<FsYamlException>
       }
-  
+
+    module OptionTypeField =
+      open System
+
+      type WithOption = {
+        A: int
+        B: int option
+      }
+
+      let 省略された場合Noneになる = test {
+        let yaml = "{ A: 1 }"
+        let actual = Yaml.load<WithOption> yaml
+        do! actual |> should equal { A = 1; B = None }
+      }
+   
 module LoadCustomTypeTest =
   open FsYaml.NativeTypes
   open FsYaml.CustomTypeDefinition
