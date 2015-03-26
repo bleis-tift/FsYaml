@@ -479,3 +479,13 @@ module LoadCustomTypeTest =
     let actual = Yaml.loadWith<CustomType> [ customConstructor ] yaml
     do! actual |> should equal (CustomType(1))
   }
+
+module LoadComplexTypeTest =
+  type t = Case1 | Case2 of int list
+
+  let ``複雑な型をloadできる`` = test {
+    let yaml = "- Case1
+- Case2: [ 42 ]"
+    let actual = Yaml.load<t list> yaml
+    do! actual |> should equal [ Case1; Case2 [ 42 ] ]
+  }
