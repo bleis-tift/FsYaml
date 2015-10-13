@@ -3,13 +3,14 @@
   <metadata>
     <id>$id$</id>
     <version>$version$</version>
-    <authors>bleis-tift</authors>
-    <owners>bleis-tift</owners>
-    <licenseUrl>https://github.com/bleis-tift/FsYaml/blob/master/NYSL.txt</licenseUrl>
-    <projectUrl>https://github.com/bleis-tift/FsYaml</projectUrl>
+    <title>$title$</title>
+    <authors>bleis-tift, hafuu</authors>
+    <owners>bleis-tift, hafuu</owners>
+    <licenseUrl>https://github.com/bleis-tift/FsYaml/blob/master/NYSL.TXT</licenseUrl>
+    <projectUrl>http://bleis-tift.github.io/FsYaml/</projectUrl>
     <requireLicenseAcceptance>false</requireLicenseAcceptance>
-    <summary>Typed Yaml Library for F#</summary>
     <description>$description$</description>
-    <tags>f# yaml library</tags>
+    <copyright>Copyright 2015</copyright>
+    <tags>f# yaml</tags>
   </metadata>
 </package>
