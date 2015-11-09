@@ -11,8 +11,8 @@ let rec construct' definitions t yaml =
       d.Construct recC t yaml
     with
       | :? FsYamlException -> reraise()
-      | ex -> raise (FsYamlException.WithYaml(ex, yaml, Messages.failedConstruct, Type.print t))
-  | None -> raise (FsYamlException.WithYaml(yaml, Messages.typeDefinitionNotFound, Type.print t))
+      | ex -> raise (FsYamlException.WithYaml(ex, yaml, Resources.getString "failedConstruct", Type.print t))
+  | None -> raise (FsYamlException.WithYaml(yaml, Resources.getString "typeDefinitionNotFound", Type.print t))
 
 let construct<'a> definitions yaml = construct' definitions typeof<'a> yaml :?> 'a
 
@@ -24,7 +24,7 @@ let rec represent' definitions t value =
       d.Represent recR t value
     with
       | :? FsYamlException -> reraise()
-      | ex -> raise (FsYamlException.Create(ex, Messages.failedRepresent, Type.print t))
-  | None -> raise (FsYamlException.Create(Messages.typeDefinitionNotFound, Type.print t))
+      | ex -> raise (FsYamlException.Create(ex, Resources.getString "failedRepresent", Type.print t))
+  | None -> raise (FsYamlException.Create(Resources.getString "typeDefinitionNotFound", Type.print t))
 
 let represent<'a> definitions (value: 'a) = represent' definitions typeof<'a> value

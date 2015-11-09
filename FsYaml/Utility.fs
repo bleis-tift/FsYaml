@@ -1,5 +1,11 @@
 ﻿module internal FsYaml.Utility
 
+module Resources =
+  type private Dummy = Dummy
+  let private manager = System.Resources.ResourceManager("Resources", typeof<Dummy>.Assembly)
+
+  let getString key = manager.GetString(key)
+
 module String =
   open System
 

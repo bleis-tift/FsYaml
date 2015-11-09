@@ -67,8 +67,3 @@ type FsYamlException(msg, ex: exn) =
   /// <param name="format">複合書式指定文字列</param>
   /// <param name="args">書式指定するオブジェクト</param>
   static member WithYaml(yaml, format, [<ParamArray>] args: obj[]) = FsYamlException.WithYaml(null, yaml, format, args)
-
-open FSharp.Configuration
-
-type private R = ResXProvider<file = "Resources.resx">
-type internal Messages = R.Resources

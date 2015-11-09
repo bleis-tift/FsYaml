@@ -69,7 +69,7 @@ module RecordConstructor =
       if expectedType.IsAssignableFrom(actualType) then
         Some value
       else
-        raise (FsYamlException.Create(Messages.invalidDefaultValueType, PropertyInfo.print defaultValueProperty, Type.print expectedType, Type.print actualType))
+        raise (FsYamlException.Create(Resources.getString "invalidDefaultValueType", PropertyInfo.print defaultValueProperty, Type.print expectedType, Type.print actualType))
 
   let tryGetDefaultValueFromOption (field: PropertyInfo) =
     let t = field.PropertyType
@@ -96,7 +96,7 @@ module RecordConstructor =
         |> Array.map (fun field ->
           match tryFindFieldValue construct' yaml mapping field with
           | Some valueObj -> valueObj
-          | None -> raise (FsYamlException.WithYaml(yaml, Messages.recordFieldNotFound, PropertyInfo.print field)))
+          | None -> raise (FsYamlException.WithYaml(yaml, Resources.getString "recordFieldNotFound", PropertyInfo.print field)))
       FSharpValue.MakeRecord(t, values)
     | otherwise -> raise (mustBeMapping t otherwise)
 
@@ -125,7 +125,7 @@ let tupleDef = {
       | Some xs ->
         let tupleValues = xs |> Seq.map (fun (elementType, node) -> construct' elementType node) |> Seq.toArray
         FSharpValue.MakeTuple(tupleValues, t)
-      | None -> raise (FsYamlException.WithYaml(yaml, Messages.tupleElementNumber, Type.print t, Array.length elementTypes))
+      | None -> raise (FsYamlException.WithYaml(yaml, Resources.getString "tupleElementNumber", Type.print t, Array.length elementTypes))
     | otherwise -> raise (mustBeSequence t otherwise)
   Represent = fun represent t obj ->
     let values =
@@ -170,7 +170,7 @@ let mapDef = {
         let key =
           match represent keyType key with
           | Scalar _ as s -> s
-          | otherwise -> raise (FsYamlException.Create(Messages.mapKeyMustBeScalar, Type.print t, YamlObject.nodeTypeName otherwise))
+          | otherwise -> raise (FsYamlException.Create(Resources.getString "mapKeyMustBeScalar", Type.print t, YamlObject.nodeTypeName otherwise))
         let value = represent valueType value
         (key, value)
       )
@@ -231,7 +231,7 @@ module UnionConstructor =
     let fieldValues =
       match Seq.tryZip fieldTypes yamls with
       | Some xs -> xs |> Seq.map (fun (t, yaml) -> construct' t.PropertyType yaml) |> Seq.toArray
-      | None -> raise (FsYamlException.WithYaml(parentYamlForExceptionMessage, Messages.unionCaseElementNumber, (Union.printCase union), fieldTypes.Length))
+      | None -> raise (FsYamlException.WithYaml(parentYamlForExceptionMessage, Resources.getString "unionCaseElementNumber", (Union.printCase union), fieldTypes.Length))
     makeUnion union fieldValues
 
   let oneFieldCase construct' yaml (union: UnionCaseInfo) =
@@ -322,7 +322,7 @@ let unionDef = {
   Construct = fun construct' t yaml ->
     match FSharpType.GetUnionCases(t) |> Seq.tryPick (UnionConstructor.tryConstruct construct' yaml) with
     | Some x -> x
-    | None -> raise (FsYamlException.WithYaml(yaml, Messages.unionCaseNotFound, Type.print t))
+    | None -> raise (FsYamlException.WithYaml(yaml, Resources.getString "unionCaseNotFound", Type.print t))
   Represent = UnionRepresenter.represent
 }
 

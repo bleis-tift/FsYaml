@@ -12,19 +12,19 @@ open FsYaml.RepresentationTypes
 /// </summary>
 /// <param name="t">変換しようとした型</param>
 /// <param name="actual">実際のYaml</param>
-let mustBeScalar t actual = FsYamlException.WithYaml(actual, Messages.mustBeScalar, Type.print t, YamlObject.nodeTypeName actual)
+let mustBeScalar t actual = FsYamlException.WithYaml(actual, Resources.getString "mustBeScalar", Type.print t, YamlObject.nodeTypeName actual)
 /// <summary>
 /// Constructorが<c>YamlObject.Sequence</c>を期待したがそうでなかった事を表す例外を生成します。
 /// </summary>
 /// <param name="t">変換しようとした型</param>
 /// <param name="actual">実際のYaml</param>
-let mustBeSequence t actual = FsYamlException.WithYaml(actual, Messages.mustBeSequence, Type.print t, YamlObject.nodeTypeName actual)
+let mustBeSequence t actual = FsYamlException.WithYaml(actual, Resources.getString "mustBeSequence", Type.print t, YamlObject.nodeTypeName actual)
 /// <summary>
 /// Constructorが<c>YamlObject.Mapping</c>を期待したがそうでなかった事を表す例外を生成します。
 /// </summary>
 /// <param name="t">変換しようとした型</param>
 /// <param name="actual">実際のYaml</param>
-let mustBeMapping t actual = FsYamlException.WithYaml(actual, Messages.mustBeMapping, Type.print t, YamlObject.nodeTypeName actual)
+let mustBeMapping t actual = FsYamlException.WithYaml(actual, Resources.getString "mustBeMapping", Type.print t, YamlObject.nodeTypeName actual)
 
 /// <summary>
 /// <c>YamlObject.Scalar</c>からオブジェクトを生成します。

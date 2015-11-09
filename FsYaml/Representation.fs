@@ -20,8 +20,8 @@ let parseYaml str =
   with
     | :? YamlException as ex ->
       let position = getPosition ex.Start
-      raise (FsYamlException.WithPosition(ex, position, Messages.failedParsing))
-    | ex -> raise (FsYamlException.WithPosition(ex, None, Messages.failedParsing))
+      raise (FsYamlException.WithPosition(ex, position, Resources.getString "failedParsing"))
+    | ex -> raise (FsYamlException.WithPosition(ex, None, Resources.getString "failedParsing"))
 
 let rec yamlDotNetToIntermediate (node: YamlNode) =
   let position = getPosition node.Start
@@ -33,7 +33,7 @@ let rec yamlDotNetToIntermediate (node: YamlNode) =
       match String.toLower scalarNode.Value with
       | "" | "null" | "~" -> Null position
       | _ -> Scalar (Plain scalarNode.Value, position)
-    | notSupported -> raise (FsYamlException.WithPosition(position, Messages.notSupportedScalarType, sprintf "%A" notSupported))
+    | notSupported -> raise (FsYamlException.WithPosition(position, Resources.getString "notSupportedScalarType", sprintf "%A" notSupported))
   | :? YamlSequenceNode as seqNode ->
     let children =
       seqNode.Children
@@ -47,13 +47,13 @@ let rec yamlDotNetToIntermediate (node: YamlNode) =
         let key =
           match yamlDotNetToIntermediate key with
           | Scalar _ as key -> key
-          | _ -> raise (FsYamlException.WithPosition(position, Messages.allowedOnlyScalar))
+          | _ -> raise (FsYamlException.WithPosition(position, Resources.getString "allowedOnlyScalar"))
         let value = yamlDotNetToIntermediate value
         (key, value)
       )
       |> Map.ofSeq
     Mapping(mapping, position)
-  | notSupported -> raise (FsYamlException.WithPosition(position, Messages.notSupportedNode, Type.print (notSupported.GetType())))
+  | notSupported -> raise (FsYamlException.WithPosition(position, Resources.getString "notSupportedNode", Type.print (notSupported.GetType())))
     
 let parse = parseYaml >> yamlDotNetToIntermediate
 
