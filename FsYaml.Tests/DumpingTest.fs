@@ -104,6 +104,11 @@ module DumpTest =
     do! actual |> should equal (sequence [ (plain "1"); (plain "2"); (plain "3") ])
   }
 
+  let ``setを変換できる`` = test {
+    let actual = represent (set [ 1; 2; 3 ])
+    do! actual |> should equal (sequence [ (plain "1"); (plain "2"); (plain "3") ])
+  }
+
   let ``Mapを変換できる`` = test {
     let actual = represent (Map.ofList [ ("a", 1); ("b", 2) ])
     do! actual |> should equal (mapping [ (nonPlain "a", plain "1"); (nonPlain "b", plain "2") ])

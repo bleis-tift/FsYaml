@@ -214,6 +214,12 @@ module LoadTest =
     do! actual |> should equal ([]: string list)
   }
 
+  let setに変換できる = test {
+    let yaml = "[ 1, 2, 3 ]"
+    let actual = Yaml.load<Set<int>> yaml
+    do! actual |> should equal (set [1; 2; 3])
+  }
+
   let mapに変換できる = test {
     let yaml = "{ a: 1, b: 2 }"
     let actual = Yaml.load<Map<string, int>> yaml
