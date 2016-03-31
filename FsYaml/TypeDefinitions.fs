@@ -147,6 +147,18 @@ let listDef = {
   Represent = representSeqAsSequence
 }
 
+let setDef = {
+  Accept = (isGenericTypeDef typedefof<Set<_>>)
+  Construct = fun construct' t yaml ->
+    match yaml with
+    | Sequence (sequence, _) ->
+      let elementType = t.GetGenericArguments().[0]
+      let elements = sequence |> List.map (construct' elementType)
+      ObjectElementSeq.toSet elementType elements
+    | otherwise -> raise (mustBeSequence t otherwise)
+  Represent = representSeqAsSequence
+}
+
 let mapDef = {
   Accept = (isGenericTypeDef typedefof<Map<_, _>>)
   Construct = fun construct' t yaml ->
@@ -347,4 +359,4 @@ let optionDef = {
       represent valueType values.[0]
 }
 
-let defaultDefinitions = [ intDef; int64Def; floatDef; stringDef; boolDef; decimalDef; datetimeDef; timespanDef; recordDef; tupleDef; listDef; mapDef; arrayDef; seqDef; optionDef; unionDef ]
+let defaultDefinitions = [ intDef; int64Def; floatDef; stringDef; boolDef; decimalDef; datetimeDef; timespanDef; recordDef; tupleDef; listDef; setDef; mapDef; arrayDef; seqDef; optionDef; unionDef ]

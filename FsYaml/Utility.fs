@@ -142,6 +142,13 @@ module ObjectElementSeq =
 
     Enumerable.Reverse(xs) |> Seq.fold cons empty
 
+  let toSet (t: Type) (xs: obj seq) =
+    let setType = typedefof<Set<_>>.MakeGenericType(t)
+    let parameter = xs |> cast t
+    let parameterType = typedefof<seq<_>>.MakeGenericType(t)
+    let constructor' = setType.GetConstructor([| parameterType |])
+    constructor'.Invoke([| parameter |])
+
   let toMap (keyType: Type) (valueType: Type) (xs: (obj * obj) seq) =
     let tupleType = typedefof<_ * _>.MakeGenericType([| keyType; valueType |])
     let parameter = xs |> Seq.map (fun (k, v) -> FSharpValue.MakeTuple([| k; v |], tupleType)) |> cast tupleType
