@@ -1,0 +1,17 @@
+type project
+owners
+    bleis-tift, hafuu
+authors 
+    bleis-tift, hafuu
+projectUrl
+    http://bleis-tift.github.io/FsYaml/
+licenseUrl
+    http://github.com/bleis-tift/FsYaml/blob/master/LICENSE.txt
+requireLicenseAcceptance
+    false
+copyright
+    Copyright 2015
+tags
+    f# yaml
+description
+    Type safe Yaml library for F#.

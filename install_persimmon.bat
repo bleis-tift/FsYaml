@@ -1,1 +1,0 @@
-.\.nuget\NuGet.exe Install Persimmon.Console -OutputDirectory tools -ExcludeVersion -Prerelease
