@@ -2,7 +2,7 @@ NUGET
   remote: https://www.nuget.org/api/v2
   specs:
     FSharp.Configuration (0.5.12)
-    YamlDotNet (3.5.1)
+    YamlDotNet (3.8.0)
 
 GROUP Build
 NUGET

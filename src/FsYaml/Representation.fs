@@ -91,7 +91,7 @@ let rec intermediateToYamlDotNet (yaml: YamlObject) =
 let toYamlString (yaml: YamlNode) =
   let stream = YamlStream(YamlDocument(yaml))
   let writer = new StringWriter()
-  stream.Save(writer)
+  stream.Save(writer, false)
   let str = writer.ToString()
   str.Substring(0, str.Length - 5) // remove "...\r\n"
 

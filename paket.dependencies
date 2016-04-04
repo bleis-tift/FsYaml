@@ -1,7 +1,7 @@
 source https://nuget.org/api/v2
 
 nuget FSharp.Configuration >= 0.4.10
-nuget YamlDotNet >= 3.5.1
+nuget YamlDotNet >= 3.8.0
 
 group Build
   source https://nuget.org/api/v2
