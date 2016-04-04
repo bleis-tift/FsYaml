@@ -174,8 +174,7 @@ Target "NuGet" (fun _ ->
     Paket.Pack(fun p ->
         { p with
             OutputPath = "bin"
-            Version = release.NugetVersion
-            ReleaseNotes = toLines release.Notes})
+            Version = release.NugetVersion })
 )
 
 Target "PublishNuget" (fun _ ->
