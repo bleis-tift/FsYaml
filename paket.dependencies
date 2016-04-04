@@ -1,0 +1,19 @@
+source https://nuget.org/api/v2
+
+nuget FSharp.Configuration >= 0.4.10
+nuget YamlDotNet >= 3.5.1
+
+group Build
+  source https://nuget.org/api/v2
+  
+  nuget SourceLink.Fake
+  nuget FAKE
+  nuget FSharp.Formatting
+  nuget FAKE.Persimmon
+
+  github fsharp/FAKE modules/Octokit/Octokit.fsx
+
+group Test
+  source https://nuget.org/api/v2
+  
+  nuget Persimmon
