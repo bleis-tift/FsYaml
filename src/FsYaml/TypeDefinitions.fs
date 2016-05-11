@@ -102,13 +102,22 @@ module internal Detail =
       | otherwise -> raise (mustBeMapping t otherwise)
 
   module RecordRepresenter =
-    let represent represent t obj =
+    open System.Reflection
+    open RecordConstructor
+
+    /// Returns the default value as an YamlObject if the field can be omitted in YAML
+    let tryRepresentDefaultValue (represent: RecursiveRepresenter) (field: PropertyInfo): option<YamlObject> =
+      field |> tryGetDefaultValue |> Option.map (represent field.PropertyType)
+
+    let represent omitsDefaultFields represent t obj =
       let values =
         FSharpType.GetRecordFields(t)
-        |> Seq.map (fun field ->
+        |> Seq.choose (fun field ->
           let name = Scalar (Plain field.Name, None)
           let value = represent field.PropertyType (field.GetValue(obj))
-          (name, value)
+          if omitsDefaultFields && Some value = tryRepresentDefaultValue represent field
+          then None  // Omit if it's the default value of the field
+          else Some (name, value)
         )
         |> Map.ofSeq
       Mapping (values, None)
@@ -116,7 +125,7 @@ module internal Detail =
   let recordDef = {
     Accept = (fun t -> FSharpType.IsRecord(t))
     Construct = RecordConstructor.construct
-    Represent = RecordRepresenter.represent
+    Represent = RecordRepresenter.represent ((* omitDefaultFields: *) false)
   }
 
   let tupleDef = {
@@ -364,5 +373,11 @@ module internal Detail =
   }
 
 open Detail
+
+/// <summary>
+/// レコードの型定義で、dump においてデフォルト値が設定されているフィールドを出力しないバージョンです。
+/// </summary>
+let recordDefOmittingDefaultFields =
+  { recordDef with Represent = RecordRepresenter.represent ((* omitDefaultFields: *) true) }
 
 let internal defaultDefinitions = [ intDef; int64Def; floatDef; stringDef; boolDef; decimalDef; datetimeDef; timespanDef; recordDef; tupleDef; listDef; setDef; mapDef; arrayDef; seqDef; optionDef; unionDef ]

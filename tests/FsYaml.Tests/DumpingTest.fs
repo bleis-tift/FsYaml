@@ -123,6 +123,21 @@ module DumpTest =
     let actual = represent (None: int option)
     do! actual |> should equal null'
   }
+  
+module DumpRecordTest =
+  open System
+
+  let representOmittingDefaultFields<'a> value = Native.represent<'a> (TypeDefinitions.recordDefOmittingDefaultFields :: TypeDefinitions.defaultDefinitions) value
+
+  type TestRecord =
+    { FieldA: int; FieldB: option<int> }
+  with
+    static member DefaultFieldA = -1
+
+  let ``省略可能なフィールドを出力しない`` = test {
+      let actual = representOmittingDefaultFields { FieldA = -1; FieldB = None }
+      do! actual |> should equal (mapping [ ])
+    }
 
 module DumpUnionTest =
   type TestUnion =
