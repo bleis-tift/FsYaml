@@ -100,10 +100,8 @@ module RecordConstructor =
       FSharpValue.MakeRecord(t, values)
     | otherwise -> raise (mustBeMapping t otherwise)
 
-let recordDef = {
-  Accept = (fun t -> FSharpType.IsRecord(t))
-  Construct = RecordConstructor.construct
-  Represent = fun represent t obj ->
+module RecordRepresenter =
+  let represent represent t obj =
     let values =
       FSharpType.GetRecordFields(t)
       |> Seq.map (fun field ->
@@ -113,6 +111,11 @@ let recordDef = {
       )
       |> Map.ofSeq
     Mapping (values, None)
+
+let recordDef = {
+  Accept = (fun t -> FSharpType.IsRecord(t))
+  Construct = RecordConstructor.construct
+  Represent = RecordRepresenter.represent
 }
 
 let tupleDef = {
