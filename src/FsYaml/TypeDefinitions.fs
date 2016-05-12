@@ -18,13 +18,17 @@ module internal Detail =
     Construct = constructFromScalar int64
     Represent = representAsPlain string
   }
-  let floatDef = {
-    Accept = (=)typeof<float>
-    Construct = constructFromScalar (String.toLower >> function
+  module FloatConstructor =
+    let ofString s =
+      match s |> String.toLower with
       | ".inf" | "+.inf" -> Double.PositiveInfinity
       | "-.inf" -> Double.NegativeInfinity
       | ".nan" -> Double.NaN
-      | otherwise -> float otherwise)
+      | otherwise -> float otherwise
+
+  let floatDef = {
+    Accept = (=)typeof<float>
+    Construct = constructFromScalar FloatConstructor.ofString
     Represent = fun represent t obj ->
       let n = unbox<float> obj
       let text =
@@ -39,12 +43,15 @@ module internal Detail =
     Construct = MaybeNull.constructFromScalar id
     Represent = MaybeNull.representAsNonPlain string
   }
-  let boolDef = {
-    Accept = (=)typeof<bool>
-    Construct = constructFromScalar (String.toLower >> function
+  module BoolConstructor =
+    let ofString s =
+      match s |> String.toLower with
       | "y" | "yes" | "on" -> true
       | "n" | "no"  | "off" -> false
-      | otherwise -> Boolean.Parse(otherwise))
+      | otherwise -> Boolean.Parse(otherwise)
+  let boolDef = {
+    Accept = (=)typeof<bool>
+    Construct = constructFromScalar BoolConstructor.ofString
     Represent = fun represent t obj ->
       let text = unbox<bool> obj |> string |> String.toLower 
       Scalar (Plain text, None)
