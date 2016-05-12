@@ -134,7 +134,12 @@ module DumpRecordTest =
   with
     static member DefaultFieldA = -1
 
-  let ``省略可能なフィールドを出力しない`` = test {
+  let ``デフォルトでは省略可能なフィールドも出力される`` = test {
+    let actual = represent { FieldA = -1; FieldB = None }
+    do! actual |> should equal (mapping [(plain "FieldA", plain "-1"); (plain "FieldB", null')])
+  }
+
+  let ``省略可能なフィールドを出力しない定義が機能する`` = test {
       let actual = representOmittingDefaultFields { FieldA = -1; FieldB = None }
       do! actual |> should equal (mapping [ ])
     }
