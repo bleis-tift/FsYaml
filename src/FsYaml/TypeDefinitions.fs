@@ -8,8 +8,16 @@ open FsYaml.NativeTypes
 open FsYaml.CustomTypeDefinition
 
 module internal Detail =
-  let intDef = { Accept = (=)typeof<int>; Construct = constructFromScalar int; Represent = representAsPlain string }
-  let int64Def = { Accept = (=)typeof<int64>; Construct = constructFromScalar int64; Represent = representAsPlain string }
+  let intDef = {
+    Accept = (=)typeof<int>
+    Construct = constructFromScalar int
+    Represent = representAsPlain string
+  }
+  let int64Def = {
+    Accept = (=)typeof<int64>
+    Construct = constructFromScalar int64
+    Represent = representAsPlain string
+  }
   let floatDef = {
     Accept = (=)typeof<float>
     Construct = constructFromScalar (String.toLower >> function
@@ -26,7 +34,11 @@ module internal Detail =
         else string n
       Scalar (Plain text, None)
   }
-  let stringDef = { Accept = (=)typeof<string>; Construct = MaybeNull.constructFromScalar id; Represent = MaybeNull.representAsNonPlain string }
+  let stringDef = {
+    Accept = (=)typeof<string>
+    Construct = MaybeNull.constructFromScalar id
+    Represent = MaybeNull.representAsNonPlain string
+  }
   let boolDef = {
     Accept = (=)typeof<bool>
     Construct = constructFromScalar (String.toLower >> function
@@ -37,7 +49,11 @@ module internal Detail =
       let text = unbox<bool> obj |> string |> String.toLower 
       Scalar (Plain text, None)
   }
-  let decimalDef = { Accept = (=)typeof<decimal>; Construct = constructFromScalar decimal; Represent = representAsPlain string }
+  let decimalDef = {
+    Accept = (=)typeof<decimal>
+    Construct = constructFromScalar decimal
+    Represent = representAsPlain string
+  }
   let datetimeDef = {
     Accept = (=)typeof<DateTime>
     Construct = constructFromScalar (fun x -> DateTime.Parse(x))
