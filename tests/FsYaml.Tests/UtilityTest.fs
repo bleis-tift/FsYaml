@@ -143,3 +143,25 @@ module BoxedMapTest =
     let actual = RuntimeMap.toSeq typeof<Map<string, int>> map
     do! actual |> should equalSeq [ (box "a", box 1); (box "b", box 2) ]
   }
+
+module SeqTest =
+  let maxListByTest = 
+    let body (xs, proj, expected) = test {
+      let actual = xs |> Seq.maxListBy proj
+      do! actual |> should equalSeq expected
+    }
+    parameterize {
+      case ([], id, Seq.empty)
+      case ([1; 2; 1; 0], (~-), seq [0])
+      case ([1; 2; 1; 3], (fun x -> x / 2), seq [2; 3])
+      run body
+    }
+
+module FuzzyTest =
+  open FsYaml.Utility
+
+  let flattenTest = test {
+    let actual = [Fuzzy.create 0.2 1; Fuzzy.create 0.3 2; Fuzzy.create 0.4 3] |> Fuzzy.flatten
+    let expected = Fuzzy.create (0.2 * 0.3 * 0.4) [1; 2; 3]
+    do! actual |> should equal expected
+  }

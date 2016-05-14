@@ -24,12 +24,14 @@
 /// </remarks>
 module FsYaml.Yaml
 
+open FsYaml.Utility
+
 /// <summary>
 /// Yaml文字列を<c>'a</c>のオブジェクトとしてロードします。
 /// </summary>
 /// <param name="yamlStr">ロードするYaml文字列</param>
 /// <exception cref="FsYaml.FsYamlException">ロードに失敗した場合</exception>
-let load<'a> yamlStr = Representation.parse yamlStr |> Native.construct<'a> TypeDefinitions.defaultDefinitions
+let load<'a> yamlStr = Representation.parse yamlStr |> Native.fuzzyConstruct<'a> TypeDefinitions.defaultInternalDefinitions |> Fuzzy.value
 
 /// <summary>
 /// 指定した型情報とデフォルトの型情報をもとに、Yaml文字列を<c>'a</c>のオブジェクトとしてロードします。
@@ -38,7 +40,9 @@ let load<'a> yamlStr = Representation.parse yamlStr |> Native.construct<'a> Type
 /// <param name="customDefinitions">ユーザが定義した型情報</param>
 /// <param name="yamlStr">ロードするYaml文字列</param>
 /// <exception cref="FsYaml.FsYamlException">ロードに失敗した場合</exception>
-let loadWith<'a> customDefinitions yamlStr = Representation.parse yamlStr |> Native.construct<'a> (Seq.append customDefinitions TypeDefinitions.defaultDefinitions)
+let loadWith<'a> customDefinitions yamlStr =
+  let definitions = Seq.append (customDefinitions |> Seq.map CustomTypeDefinition.internalTypeDefinitionFromTypeDefinition) TypeDefinitions.defaultInternalDefinitions
+  Representation.parse yamlStr |> Native.fuzzyConstruct<'a> definitions |> Fuzzy.value
 
 /// <summary>
 /// Yaml文字列を<c>'a</c>のオブジェクトとしてロードします。ロードに失敗した場合はNoneを返します。
