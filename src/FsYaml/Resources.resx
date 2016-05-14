@@ -165,6 +165,9 @@
   <data name="unionCaseElementNumber" xml:space="preserve">
     <value>{0} case must have {1} elements.</value>
   </data>
+  <data name="unionCaseInferenceRace" xml:space="preserve">
+    <value>More than one {0} cases are found. FsYaml couldn't resolve ambiguity.</value>
+  </data>
   <data name="unionCaseNotFound" xml:space="preserve">
     <value>Any {0} cases is not found.</value>
   </data>

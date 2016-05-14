@@ -66,6 +66,7 @@ module RepresentationTypes =
 /// YamlのNative層の型を提供します。
 module NativeTypes =
   open RepresentationTypes
+  open FsYaml.Utility
 
   /// <summary>
   /// Yamlから<c>Type</c>が表す型のオブジェクトに変換します。
@@ -94,3 +95,27 @@ module NativeTypes =
     /// オブジェクトからYamlに変換します。
     Represent: RecursiveRepresenter -> Representer
   }
+
+  /// Yamlから<ct>Type</c>が表す型のオブジェクトに変換します。
+  /// 変換結果の曖昧性は、その変換の好ましさを表します。
+  type internal FuzzyConstructor = Type -> YamlObject -> Fuzzy<obj>
+
+  /// 再帰的に、Yamlからオブジェクトに変換します。
+  type internal RecursiveFuzzyConstructor = FuzzyConstructor
+
+  /// Yamlとオブジェクト間の変換に関する情報です。
+  type internal InternalTypeDefinition = {
+    /// 渡された型が変換可能か返します。
+    Accept: Type -> bool
+    /// Yamlからオブジェクトに変換します。
+    FuzzyConstruct: RecursiveFuzzyConstructor -> FuzzyConstructor
+    /// オブジェクトからYamlに変換します。
+    Represent: RecursiveRepresenter -> Representer
+  }
+
+module Attributes =
+  /// <summary>
+  /// load において、この属性がついた判別共用体型のユニオンケースは推論されます。
+  /// </summary>
+  type InferUnionCaseAttribute() =
+    inherit Attribute()

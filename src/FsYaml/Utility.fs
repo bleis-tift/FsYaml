@@ -117,10 +117,54 @@ module Seq =
     else
       Some (Seq.zip xs ys)
 
+  // 射影 proj の値を最大化する要素のリストを返します。
+  let maxListBy proj xs =
+    if xs |> Seq.isEmpty
+    then []
+    else
+      let folder (acc, projMax) x =
+        let projX = proj x
+        if projMax < projX then ([x], projX)
+        elif projMax = projX then (x :: acc, projMax)
+        else (acc, projMax)
+      let x = xs |> Seq.head
+      xs |> Seq.skip 1 |> Seq.fold folder ([x], proj x) |> fst |> List.rev
+
 module Option =
   let filter f = Option.bind (fun x -> if f x then Some x else None)
 
+  let getOrElse f =
+    function
+    | Some x -> x
+    | None -> f ()
+
 let fsharpAsembly = typedefof<list<_>>.Assembly
+
+[<AutoOpen>]
+module FuzzyType =
+  type Fuzzy<'t> =
+    | Fuzzy of 't * float
+
+module Fuzzy =
+  let create (p: float) (x: 'x): Fuzzy<'x> =
+    assert (p > 0.0)
+    Fuzzy (x, p)
+
+  let value (Fuzzy (x, _)) = x
+  let probability (Fuzzy (_, p)) = p
+
+  let result (x: 'x): Fuzzy<'x> = Fuzzy (x, 1.0)
+
+  let bind (f: 'x -> Fuzzy<'y>) (Fuzzy ((x: 'x), p)): Fuzzy<'y> =
+    let (Fuzzy (y, q)) = f x
+    in Fuzzy (y, p * q)
+
+  let map (f: 'x -> 'y) (m: Fuzzy<'x>): Fuzzy<'y> =
+     bind (f >> result) m
+
+  let flatten (ms: seq<Fuzzy<'t>>): Fuzzy<list<'t>> =
+    let folder acc m = acc |> bind (fun xs -> m |> map (fun x -> x :: xs))
+    ms |> Seq.fold folder (result []) |> map List.rev
 
 module ObjectElementSeq =
   open System

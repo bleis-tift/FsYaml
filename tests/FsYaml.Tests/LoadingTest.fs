@@ -395,6 +395,121 @@ module LoadUnionTest =
       run body
     }
 
+  module LoadInferUnionCaseTest =
+    open FsYaml.Attributes
+    open FsYaml.Utility
+
+    [<InferUnionCase>]
+    type InferUnion =
+      | Int of int
+      | String of string
+      | Tuple of int * string
+      | List of list<string>
+      | MapInt of Map<int, string>
+      | MapString of Map<string, string>
+
+    let ``ユニオンケース推論ができる`` =
+      let body (yaml, expected) = test {
+        let actual = yaml |> Yaml.load<InferUnion>
+        do! actual |> should equal expected
+      }
+      parameterize {
+        // 標準的なテスト
+        case ("a", String "a")
+        case ("1.2", String "1.2")
+        case ("[1, a]", Tuple (1, "a"))
+        case ("[a, b]", List ["a"; "b"])
+        case ("[1, 2, 3]", List ["1"; "2"; "3"])
+        case ("{a: b}", MapString (Map.ofList [("a", "b")]))
+        // plain スカラーは非文字列への変換が優先される
+        case ("1", Int 1)
+        case ("[1, 'a']", Tuple (1, "a"))
+        case ("{1: a}", MapInt (Map.ofList [(1, "a")]))
+        // non-plain スカラーは文字列への変換が優先される
+        case ("'1'", String "1")
+        case ("['1', 'a']", List ["1"; "a"])
+        case ("{'1': a}", MapString (Map.ofList [("1", "a")]))
+        run body
+      }
+
+    [<InferUnionCase>]
+    type BinaryTree =
+      | Leaf of int
+      | Node of BinaryTree * BinaryTree
+      
+    let ``再帰的なユニオンケース推論ができる`` =
+      let body (yaml, expected) = test {
+        let actual = yaml |> Yaml.load<BinaryTree>
+        do! actual |> should equal expected
+      }
+      parameterize {
+        // 標準的なテスト
+        case ("1", Leaf 1)
+        case ("[1, 2]", Node (Leaf 1, Leaf 2))
+        case ("[1, [2, 3]]", Node (Leaf 1, Node(Leaf 2, Leaf 3)))
+        // ユニオンケースつきでも推論できる
+        case ("Leaf: 1", Leaf 1)
+        case ("[1, Leaf: 2]", Node (Leaf 1, Leaf 2))
+        case ("Node: [1, Node: [2, 3]]", Node (Leaf 1, Node(Leaf 2, Leaf 3)))
+        run body
+      }
+
+    [<InferUnionCase>]
+    type InferNull = InferNull
+
+    let ``値なしユニオンケースを推論できる`` = test {
+      let actual = Yaml.load<InferNull> "null"
+      do! actual |> should equal InferNull
+    }
+
+    [<InferUnionCase>]
+    type InferInt = InferInt of int
+
+    [<InferUnionCase>]
+    type InferString = InferString of string
+
+    let ``好ましくない変換も一意なら成功する`` =
+      test {
+        do! Yaml.load<InferInt> "'1'" |> should equal (InferInt 1)
+        do! Yaml.load<InferString> "1" |> should equal (InferString "1")
+      }
+
+    [<InferUnionCase>]
+    type ComplexInferUnion =
+      | InferIntA of int
+      | InferIntB of int
+      | InferIntInt of int * int
+      | InferStringString of string * string
+
+    let ``ユニオンケース推論の競合を検出できる`` =
+      let body yaml = test {
+        let! _ = trap { it (yaml |> Yaml.load<ComplexInferUnion>) }
+        return ()
+      }
+      parameterize {
+        // 候補なし
+        case "a"
+        case "[]"
+        // 競合
+        case "1"
+        case "'1'"
+        case "['1', 2]"
+        case "[1, '2']"
+        run body
+      }
+
+    [<InferUnionCase>]
+    type InferMap = InferMap of Map<string, InferMap>
+
+    let InferMapTest = test {
+      do! Yaml.load<InferMap> "InferMap: {}" |> should equal (InferMap Map.empty)
+    }
+
+    let ``ユニオンケースの有無による競合を検出できる`` = test {
+      let! _ = trap { it (Yaml.load<InferMap> "'InferMap': {}") }
+      return ()
+    }
+
 module LoadRecordTest =
   type TestRecord = { A: int; B: string }
 

@@ -2,21 +2,22 @@
 
 open FsYaml.Utility
 open FsYaml.NativeTypes
+open FsYaml.TypeDefinitions
 
-let rec construct' definitions t yaml =
+let rec fuzzyConstruct' definitions t yaml =
   match definitions |> Seq.tryFind (fun d -> d.Accept t) with
   | Some d ->
-    let recC = construct' definitions
+    let recC = fuzzyConstruct' definitions
     try
-      d.Construct recC t yaml
+      d.FuzzyConstruct recC t yaml
     with
       | :? FsYamlException -> reraise()
       | ex -> raise (FsYamlException.WithYaml(ex, yaml, Resources.getString "failedConstruct", Type.print t))
   | None -> raise (FsYamlException.WithYaml(yaml, Resources.getString "typeDefinitionNotFound", Type.print t))
 
-let construct<'a> definitions yaml = construct' definitions typeof<'a> yaml :?> 'a
+let fuzzyConstruct<'a> definitions yaml = fuzzyConstruct' definitions typeof<'a> yaml |> Fuzzy.map (fun x -> x :?> 'a)
 
-let rec represent' definitions t value =
+let rec represent' (definitions: seq<TypeDefinition>) t value =
   match definitions |> Seq.tryFind (fun d -> d.Accept t) with
   | Some d ->
     let recR = represent' definitions
