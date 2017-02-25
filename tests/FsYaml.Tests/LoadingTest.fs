@@ -32,7 +32,7 @@ module RepresentationTest =
       case ("3-4")
       run body
     }
-    
+
   let NonPlainをパースできる =
     let body (input, expected) = test {
       let actual = parse input
@@ -59,7 +59,7 @@ module RepresentationTest =
 """
       run body
     }
-    
+
   let Mappingをパースできる =
     let body input = test {
       let actual = parse input
@@ -78,7 +78,7 @@ ghi:
 """
       run body
     }
-    
+
   let Nullをパースできる =
     let body input = test {
       let actual = parse input
@@ -91,7 +91,7 @@ ghi:
       case "abc: ~"
       run body
     }
-    
+
 module LoadTest =
   open System
 
@@ -306,7 +306,7 @@ module LoadUnionTest =
   }
 
   type ManyFieldsCase = ManyFieldsCase of int * string * string
-  
+
   let ``フィールドが複数あるケース`` = test {
     let yaml = "ManyFieldsCase: [ 1, a, b ]"
     let actual = Yaml.load<ManyFieldsCase> yaml
@@ -322,7 +322,7 @@ module LoadUnionTest =
   }
 
   type ManyNamedFieldCase = ManyNamedFieldCase of x: int * y: string
-  
+
   let ``複数の名前付きフィールドのケース`` = test {
     let yaml = "ManyNamedFieldCase: { x: 1, y: a }"
     let actual = Yaml.load<ManyNamedFieldCase> yaml
@@ -359,7 +359,7 @@ module LoadUnionTest =
 
   [<CompilationRepresentation(CompilationRepresentationFlags.UseNullAsTrueValue)>]
   type UseNullAsTrueValueCase = NullCase | ValueCase1 of int | ValueCase2 of string
-    
+
   let ``UseNullAsTrueValueのnullのケース`` = test {
     let yaml = "NullCase"
     let actual = Yaml.load<UseNullAsTrueValueCase> yaml
@@ -383,7 +383,7 @@ module LoadUnionTest =
       case ("None")
       run body
     }
-    
+
   let ``Option.Some`` =
     let body yaml = test {
       let actual = Yaml.load<Option<int>> yaml
@@ -451,7 +451,7 @@ module LoadRecordTest =
         let actual = Yaml.load<WithOption> yaml
         do! actual |> should equal { A = 1; B = None }
       }
-   
+
 module LoadCustomTypeTest =
   open FsYaml.NativeTypes
   open FsYaml.CustomTypeDefinition
@@ -469,7 +469,7 @@ module LoadCustomTypeTest =
 
     override this.GetHashCode() = this.X.GetHashCode()
 
-  let customConstructor = { 
+  let customConstructor = {
     Accept = ((=) typeof<CustomType>)
     Construct = fun construct' t yaml ->
       match yaml with
@@ -494,4 +494,15 @@ module LoadComplexTypeTest =
 - Case2: [ 42 ]"
     let actual = Yaml.load<t list> yaml
     do! actual |> should equal [ Case1; Case2 [ 42 ] ]
+  }
+
+module LoadUntyped =
+  type TestRecord = { A: int; B: string }
+
+  let typ = typeof<TestRecord>
+
+  let recordLoadUntyped = test {
+    let yaml = "{ A: 123, B: abc }"
+    let actual = Yaml.loadUntyped typ yaml |> unbox<TestRecord>
+    do! actual |> should equal { A = 123; B = "abc" }
   }
