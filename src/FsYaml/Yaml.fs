@@ -62,16 +62,41 @@ let tryLoadWith<'a> customDefinitions yamlStr =
   with
     _ -> None
 
+/// <summary>
+/// Yaml文字列を<c>typ</c>のオブジェクトとしてロードします。
+/// </summary>
+/// <param name="typ">ロードする型</param>
+/// <param name="yamlStr">ロードするYaml文字列</param>
+/// <exception cref="FsYaml.FsYamlException">ロードに失敗した場合</exception>
 let loadUntyped typ yamlStr = Representation.parse yamlStr |> Native.constructUntyped typ TypeDefinitions.defaultDefinitions
 
+/// <summary>
+/// 指定した型情報とデフォルトの型情報をもとに、Yaml文字列を<c>typ</c>のオブジェクトとしてロードします。
+/// 指定された型情報は、デフォルトの型情報より優先されます。そして、デフォルトの型情報と同じ型を指定すると、ロードの挙動を上書きできます。
+/// </summary>
+/// <param name="typ">ロードする型</param>
+/// <param name="customDefinitions">ユーザが定義した型情報</param>
+/// <param name="yamlStr">ロードするYaml文字列</param>
 let loadWithUntyped typ customDefinitions yamlStr = Representation.parse yamlStr |> Native.constructUntyped typ (Seq.append customDefinitions TypeDefinitions.defaultDefinitions)
 
+/// <summary>
+/// Yaml文字列を<c>typ</c>のオブジェクトとしてロードします。ロードに失敗した場合はNoneを返します。
+/// </summary>
+/// <param name="typ">ロードする型</param>
+/// <param name="yamlStr">ロードするYaml文字列</param>
 let tryLoadUntyped typ yamlStr =
   try
     Some (loadUntyped typ yamlStr)
   with
     _ -> None
 
+/// <summary>
+/// 指定した型情報とデフォルトの型情報をもとに、Yaml文字列を<c>typ</c>のオブジェクトとしてロードします。ロードに失敗した場合はNoneを返します。
+/// 指定された型情報は、デフォルトの型情報より優先されます。そして、デフォルトの型情報と同じ型を指定すると、ロードの挙動を上書きできます。
+/// </summary>
+/// <param name="typ">ロードする型</param>
+/// <param name="customDefinitions">ユーザが定義した型情報</param>
+/// <param name="yamlStr">ロードするYaml文字列</param>
 let tryLoadWithUntyped typ customDefinitions yamlStr =
   try
     Some (loadWithUntyped typ customDefinitions yamlStr)
