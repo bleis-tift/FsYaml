@@ -64,7 +64,7 @@ let tryLoadWith<'a> customDefinitions yamlStr =
 
 let loadUntyped typ yamlStr = Representation.parse yamlStr |> Native.constructUntyped typ TypeDefinitions.defaultDefinitions
 
-let loadWithloadUntyped typ customDefinitions yamlStr = Representation.parse yamlStr |> Native.constructUntyped typ (Seq.append customDefinitions TypeDefinitions.defaultDefinitions)
+let loadWithUntyped typ customDefinitions yamlStr = Representation.parse yamlStr |> Native.constructUntyped typ (Seq.append customDefinitions TypeDefinitions.defaultDefinitions)
 
 let tryLoadUntyped typ yamlStr =
   try
@@ -74,7 +74,7 @@ let tryLoadUntyped typ yamlStr =
 
 let tryLoadWithUntyped typ customDefinitions yamlStr =
   try
-    Some (loadWithloadUntyped typ customDefinitions yamlStr)
+    Some (loadWithUntyped typ customDefinitions yamlStr)
   with
     _ -> None
 
