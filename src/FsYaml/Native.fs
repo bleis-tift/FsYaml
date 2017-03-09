@@ -16,6 +16,8 @@ let rec construct' definitions t yaml =
 
 let construct<'a> definitions yaml = construct' definitions typeof<'a> yaml :?> 'a
 
+let constructUntyped typ definitions yaml = construct' definitions typ yaml
+
 let rec represent' definitions t value =
   match definitions |> Seq.tryFind (fun d -> d.Accept t) with
   | Some d ->

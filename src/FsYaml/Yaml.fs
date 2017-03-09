@@ -62,12 +62,29 @@ let tryLoadWith<'a> customDefinitions yamlStr =
   with
     _ -> None
 
+let loadUntyped typ yamlStr = Representation.parse yamlStr |> Native.constructUntyped typ TypeDefinitions.defaultDefinitions
+
+let loadWithloadUntyped typ customDefinitions yamlStr = Representation.parse yamlStr |> Native.constructUntyped typ (Seq.append customDefinitions TypeDefinitions.defaultDefinitions)
+
+let tryLoadUntyped typ yamlStr =
+  try
+    Some (loadUntyped typ yamlStr)
+  with
+    _ -> None
+
+let tryLoadWithUntyped typ customDefinitions yamlStr =
+  try
+    Some (loadWithloadUntyped typ customDefinitions yamlStr)
+  with
+    _ -> None
+
 /// <summary>
 /// オブジェクトをYaml文字列へダンプします。
 /// </summary>
 /// <param name="obj">ダンプするオブジェクト</param>
 /// <exception cref="FsYaml.FsYamlException">ダンプに失敗した場合</exception>
 let dump<'a> obj = Native.represent<'a> TypeDefinitions.defaultDefinitions obj |> Representation.present
+
 
 /// <summary>
 /// 指定した型情報とデフォルトの型情報をもとに、オブジェクトをYaml文字列へダンプします。
