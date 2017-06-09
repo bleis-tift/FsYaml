@@ -1,3 +1,7 @@
+### 2.2.0 - 2017-06-10
+* 省略可能なフィールドは出力しない TypeDefinitions.recordDefOmittingDefaultFields を追加 - https://github.com/bleis-tift/FsYaml/pull/32
+* 型を System.Type で指定するAPIを追加 - https://github.com/bleis-tift/FsYaml/pull/35
+
 ### 2.1.0 - 2016-04-04
 * Set<'T>に対応 - https://github.com/bleis-tift/FsYaml/pull/28
 * YamlDotNetを3.8.0に更新 - https://github.com/bleis-tift/FsYaml/issues/29
