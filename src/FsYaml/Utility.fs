@@ -7,7 +7,6 @@ module Resources =
   let getString key = manager.GetString(key)
 
 module String =
-  open System
 
   let toLower (x: string) = x.ToLower()
 
@@ -67,7 +66,7 @@ module Type =
     |> Array.map (fun elemType ->
       let elemName = print elemType
       if FSharpType.IsTuple(elemType) then
-        sprintf "(%s)" elemName
+        $"(%s{elemName})"
       else
         elemName
     )
@@ -79,15 +78,15 @@ module Type =
       let elemName = print elem
       let name = typeName t
       if elem.IsGenericType then
-        sprintf "(%s) %s" elemName name
+        $"(%s{elemName}) %s{name}"
       else
-        sprintf "%s %s" elemName name
+        $"%s{elemName} %s{name}"
     | None ->
       let args = t.GetGenericArguments() |> Array.map print |> String.concat ", "
-      sprintf "%s<%s>" (typeName t) args
+      $"%s{typeName t}<%s{args}>"
   and internal printArray (t: Type) =
     let elem = t.GetElementType()
-    sprintf "%s[]" (print elem)
+    $"%s{print elem}[]"
 
 module Attribute =
   open System
@@ -103,12 +102,12 @@ module Attribute =
 module PropertyInfo =
   open System.Reflection
 
-  let print (x: PropertyInfo) = sprintf "%s.%s" (Type.print x.DeclaringType) x.Name
+  let print (x: PropertyInfo) = $"%s{Type.print x.DeclaringType}.%s{x.Name}"
 
 module Union =
   open Microsoft.FSharp.Reflection
 
-  let printCase (x: UnionCaseInfo) = sprintf "%s.%s" (Type.print x.DeclaringType) x.Name
+  let printCase (x: UnionCaseInfo) = $"%s{Type.print x.DeclaringType}.%s{x.Name}"
 
 module Seq =
   let tryZip xs ys =
@@ -120,7 +119,7 @@ module Seq =
 module Option =
   let filter f = Option.bind (fun x -> if f x then Some x else None)
 
-let fsharpAsembly = typedefof<list<_>>.Assembly
+let fsharpAssembly = typedefof<list<_>>.Assembly
 
 module ObjectElementSeq =
   open System
@@ -166,7 +165,7 @@ module RuntimeSeq =
   open System
   open Microsoft.FSharp.Reflection
 
-  let seqModule = fsharpAsembly.GetType("Microsoft.FSharp.Collections.SeqModule")
+  let seqModule = fsharpAssembly.GetType("Microsoft.FSharp.Collections.SeqModule")
 
   let elementType (t: Type) =
     if t.IsArray then
@@ -186,7 +185,7 @@ module RuntimeMap =
   open System
   open Microsoft.FSharp.Reflection
 
-  let mapModule = fsharpAsembly.GetType("Microsoft.FSharp.Collections.MapModule")
+  let mapModule = fsharpAssembly.GetType("Microsoft.FSharp.Collections.MapModule")
 
   let elementTypes (t: Type) = let ts = t.GetGenericArguments() in (ts.[0], ts.[1])
 

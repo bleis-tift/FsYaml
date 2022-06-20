@@ -39,7 +39,7 @@ type FsYamlException(msg, ex: exn) =
     let msg = String.Format(format, args)
     let msg =
       match position with
-      | Some p -> sprintf "%s (Line=%d, Column=%d)" msg p.Line p.Column
+      | Some p -> $"%s{msg} (Line=%d{p.Line}, Column=%d{p.Column})"
       | None -> msg
     FsYamlException(msg, innerException)
 

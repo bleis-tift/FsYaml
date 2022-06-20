@@ -1,9 +1,6 @@
-﻿module YamlTest
+module Tests
 
-open Persimmon
-open UseTestNameByReflection
-open Assertions
-
+open Expecto
 open FsYaml
 
 type ComplexType = {
@@ -26,9 +23,12 @@ let value = {
     }
 }
 
-let ``オブジェクトをYamlの文字列にできる`` = test {
-  let actual = Yaml.dump value
-  let expected = """FieldA:
+[<Tests>]
+let tests =
+  testList "samples" [
+    test "Objects can be Yaml strings" {
+      let actual = Yaml.dump value
+      let expected = """FieldA:
 - 1
 - 2
 - 3
@@ -46,11 +46,13 @@ FieldD:
   FieldC: "abcdefghijk"
   FieldD: null
 """
-  do! actual |> should equal expected
-}
 
-let ``dumpしてloadすると元の値になる`` = test {
-  let yaml = Yaml.dump value
-  let actual = Yaml.load<ComplexType> yaml
-  do! actual |> should equal value
-}
+    "Objects should be equal" |> Expect.equal actual expected
+    }
+    
+    test "If you dump and load it, it will return to the original value." {
+      let yaml = Yaml.dump value
+      let actual = Yaml.load<ComplexType> yaml
+      "Objects should be equal" |> Expect.equal actual value
+    }
+  ]

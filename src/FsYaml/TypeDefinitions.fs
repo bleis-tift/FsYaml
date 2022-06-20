@@ -59,7 +59,7 @@ module internal Detail =
 
     let tryGetDefaultValueFromStaticField (field: PropertyInfo) =
       let t = field.DeclaringType
-      let name = sprintf "Default%s" field.Name
+      let name = $"Default%s{field.Name}"
       let defaultValueProperty = t.GetProperty(name, BindingFlags.Public ||| BindingFlags.Static)
       if defaultValueProperty = null then
         None
@@ -316,7 +316,7 @@ module internal Detail =
       match fields.Length with
       | 0 -> false
       | 1 -> fields.[0].Name <> "Item"
-      | _ -> fields |> Array.mapi (fun i field -> (i + 1, field)) |> Array.forall (fun (n, field) -> field.Name <> sprintf "Item%d" n)
+      | _ -> fields |> Array.mapi (fun i field -> (i + 1, field)) |> Array.forall (fun (n, field) -> field.Name <> $"Item%d{n}")
 
     let namedField represent (union: UnionCaseInfo) (values: obj[]) =
       let fields = union.GetFields()

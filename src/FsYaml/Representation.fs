@@ -33,7 +33,7 @@ let rec yamlDotNetToIntermediate (node: YamlNode) =
       match String.toLower scalarNode.Value with
       | "" | "null" | "~" -> Null position
       | _ -> Scalar (Plain scalarNode.Value, position)
-    | notSupported -> raise (FsYamlException.WithPosition(position, Resources.getString "notSupportedScalarType", sprintf "%A" notSupported))
+    | notSupported -> raise (FsYamlException.WithPosition(position, Resources.getString "notSupportedScalarType", $"%A{notSupported}"))
   | :? YamlSequenceNode as seqNode ->
     let children =
       seqNode.Children
